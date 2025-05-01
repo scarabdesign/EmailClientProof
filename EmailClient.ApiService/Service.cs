@@ -2,7 +2,7 @@
 
 namespace EmailClient.ApiService
 {
-    public class Service(EmailClientDbContext dbContext, ILogger<EmailClientDbContext> logger)
+    public class Service(EmailClientDbContext dbContext, ILogger<Service> logger)
     {
         public async Task<List<EmailAttempt>?> GetAllEmailAttempts()
         {
@@ -32,6 +32,28 @@ namespace EmailClient.ApiService
             }
 
             return false;
+        }
+
+        public async Task<string?> RemoveEmailAttempt(int id)
+        {
+            try
+            {
+                var targetAttempt = dbContext.EmailAttempts.FirstOrDefault(a => a.Id == id);
+                if (targetAttempt != null)
+                {
+                    dbContext.EmailAttempts.Remove(targetAttempt);
+                    await dbContext.SaveChangesAsync();
+                    return targetAttempt.Email;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while removing email attempt: {ErrorMessage}", ex.Message);
+            }
+
+            return null;
         }
     }
 }

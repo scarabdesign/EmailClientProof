@@ -1,4 +1,7 @@
 using EmailClient.ApiService;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Cors;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +14,11 @@ builder.AddNpgsqlDbContext<EmailClientDbContext>("emaildb", c => c.DisableTracin
 
 builder.Logging.AddConsole();
 
+
+builder.Services.AddCors(c =>
+{
+    c.AddPolicy("AllowOrigin", opts => opts.AllowAnyOrigin());
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddScoped<Service>();
 
@@ -18,6 +26,7 @@ builder.Services.AddScoped<Service>();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseCors(opts => opts.AllowAnyOrigin());
 
 MapEndPoints();
 
@@ -40,9 +49,16 @@ void MapEndPoints()
 
     app.MapPost("/addAttempt", async (EmailAttempt emailAttempt) =>
     {
-        return await service.AddEmailAttempt(emailAttempt) ? Results.Ok() : Results.Problem("Failed to add email attempt.");
+        return await service.AddEmailAttempt(emailAttempt) ? Results.Ok(new { result = "ok", email = emailAttempt.Email}) : Results.Problem("Adding attempt failed");
     })
     .WithName("addAttempt");
+
+    app.MapDelete("/removeAttempt", async (int id) =>
+    {
+        var email = await service.RemoveEmailAttempt(id);
+        return email != null ? Results.Ok(new { result = "ok", email }) : Results.Problem("Removing attempt failed");
+    })
+    .WithName("removeAttempt");
 }
 
 
