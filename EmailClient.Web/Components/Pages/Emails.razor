@@ -1,0 +1,52 @@
+﻿@page "/email"
+@using static EmailClient.Web.EmailApiClient
+@attribute [StreamRendering(true)]
+@attribute [OutputCache(Duration = 5)]
+
+@inject EmailApiClient EmailApi
+
+<PageTitle>Email Client</PageTitle>
+
+<h1>Email Attempts</h1>
+
+<p>This component demonstrates showing data loaded from a backend API service.</p>
+
+@if (emailAttempts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Status</th>
+                <th aria-label="Number of attempts">Attempts</th>
+                <th aria-label="First attempt date/time">First Attempt</th>
+                <th aria-label="Last attempt date/time">Last Attempt</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var attempt in emailAttempts)
+            {
+                <tr>
+                    <td>@attempt.Email</td>
+                    <td>@attempt.Status.ToString()</td>
+                    <td>@attempt.Attempts.ToString()</td>
+                    <td>@attempt.Created.ToShortTimeString()</td>
+                    <td>@attempt.LastAttempt.ToShortTimeString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<EmailAttempt>? emailAttempts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        emailAttempts = await EmailApi.GetAllAttempts();
+    }
+}
