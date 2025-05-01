@@ -1,3 +1,5 @@
+using EmailClient.ApiService;
+
 namespace EmailClient.Web;
 
 public class EmailApiClient(HttpClient httpClient)
@@ -17,25 +19,5 @@ public class EmailApiClient(HttpClient httpClient)
         }
 
         return attempts ?? [];
-    }
-
-    public class EmailAttempt
-    {
-        public int Id { get; set; }
-        public required string Email { get; set; }
-        public EmailStatus Status { get; set; }
-        public int Attempts { get; set; }
-        public string? Result { get; set; }
-        public int ErrorCode { get; set; }
-        public DateTime Created { get; set; }
-        public DateTime LastAttempt { get; set; }
-    }
-
-    public enum EmailStatus
-    {
-        Unsent,
-        InProgress,
-        Sent,
-        Failed
     }
 }

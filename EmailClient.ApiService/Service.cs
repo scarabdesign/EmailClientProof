@@ -12,10 +12,26 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, null);
+                logger.LogError(ex, "An error occurred while retrieving email attempts: {ErrorMessage}", ex.Message);
             }
 
             return null;
+        }
+
+        public async Task<bool> AddEmailAttempt(EmailAttempt emailAttempt)
+        {
+            try
+            {
+                dbContext.EmailAttempts.Add(emailAttempt);
+                await dbContext.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while adding email attempt: {ErrorMessage}", ex.Message);
+            }
+
+            return false;
         }
     }
 }

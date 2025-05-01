@@ -1,4 +1,5 @@
 ﻿@page "/email"
+@using EmailClient.ApiService
 @using static EmailClient.Web.EmailApiClient
 @attribute [StreamRendering(true)]
 @attribute [OutputCache(Duration = 5)]
@@ -8,8 +9,6 @@
 <PageTitle>Email Client</PageTitle>
 
 <h1>Email Attempts</h1>
-
-<p>This component demonstrates showing data loaded from a backend API service.</p>
 
 @if (emailAttempts == null)
 {
@@ -34,8 +33,8 @@ else
                     <td>@attempt.Email</td>
                     <td>@attempt.Status.ToString()</td>
                     <td>@attempt.Attempts.ToString()</td>
-                    <td>@attempt.Created.ToShortTimeString()</td>
-                    <td>@attempt.LastAttempt.ToShortTimeString()</td>
+                    <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
+                    <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
                 </tr>
             }
         </tbody>

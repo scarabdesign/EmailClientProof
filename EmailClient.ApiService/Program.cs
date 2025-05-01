@@ -19,14 +19,31 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-app.MapGet("/getAllAttempts", async () =>
+MapEndPoints();
+
+app.Use(async (context, next) =>
 {
     await EnsureCreated();
-    return await app.Services.CreateScope().ServiceProvider.GetRequiredService<Service>().GetAllEmailAttempts();
-})
-.WithName("getAllAttempts");
+    await next();
+});
 
 app.MapDefaultEndpoints().Run();
+
+void MapEndPoints()
+{
+    var service = app.Services.CreateScope().ServiceProvider.GetRequiredService<Service>();
+    app.MapGet("/getAllAttempts", async () =>
+    {
+        return await service.GetAllEmailAttempts();
+    })
+    .WithName("getAllAttempts");
+
+    app.MapPost("/addAttempt", async (EmailAttempt emailAttempt) =>
+    {
+        return await service.AddEmailAttempt(emailAttempt) ? Results.Ok() : Results.Problem("Failed to add email attempt.");
+    })
+    .WithName("addAttempt");
+}
 
 
 async Task EnsureCreated()
