@@ -6,6 +6,16 @@ namespace EmailClient.ApiService
     public class EmailClientDbContext(DbContextOptions<EmailClientDbContext> options) : DbContext(options)
     {
         public DbSet<EmailAttempt> EmailAttempts { get; set; }
+        public DbSet<Campaign> Campaigns { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<EmailAttempt>()
+                .HasOne(e => e.Campaign)
+                .WithMany(c => c.EmailAttempts)
+                .HasForeignKey(e => e.CampaignId);
+        }
     }
 
     [PrimaryKey(nameof(Id))]
@@ -20,6 +30,23 @@ namespace EmailClient.ApiService
         public int ErrorCode { get; set; } = -1;
         public DateTime Created { get; set; } = DateTime.UtcNow;
         public DateTime? LastAttempt { get; set; }
+        public required int CampaignId { get; set; }
+        public Campaign? Campaign { get; set; }
+    }
+
+    [PrimaryKey(nameof(Id))]
+    public class Campaign
+    {
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
+        public required string Name { get; set; }
+        public required string Subject { get; set; }
+        public required string Body { get; set; }
+        public required string Sender { get; set; }
+        public CampaignStatus Status { get; set; } = CampaignStatus.NotStarted;
+        public DateTime Created { get; set; } = DateTime.UtcNow;
+        public DateTime Updated { get; set; } = DateTime.UtcNow;
+        public List<EmailAttempt>? EmailAttempts { get; set; } = new List<EmailAttempt>();
     }
 
     public enum EmailStatus
@@ -28,5 +55,12 @@ namespace EmailClient.ApiService
         InProgress,
         Sent,
         Failed,
+    }
+
+    public enum CampaignStatus
+    {
+        NotStarted,
+        InProgress,
+        Completed,
     }
 }

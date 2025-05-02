@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EmailClient.ApiService\EmailClient.ApiService.csproj" />
     <ProjectReference Include="..\EmailClient.AppHost\EmailClient.AppHost.csproj" />
   </ItemGroup>
 

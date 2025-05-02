@@ -1,14 +1,9 @@
 using EmailClient.ApiService;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors.Infrastructure;
-using Microsoft.AspNetCore.Mvc.Cors;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-
-//builder.AddNpgsqlDataSource(connectionName: "emaildb");
 
 builder.AddNpgsqlDbContext<EmailClientDbContext>("emaildb", c => c.DisableTracing = true);
 
@@ -20,8 +15,9 @@ builder.Services.AddCors(c =>
     c.AddPolicy("AllowOrigin", opts => opts.AllowAnyOrigin());
 });
 builder.Services.AddProblemDetails();
-builder.Services.AddScoped<Service>();
 
+builder.Services.AddScoped<EmailClientData>();
+builder.Services.AddScoped<Service>();
 
 var app = builder.Build();
 
@@ -49,7 +45,8 @@ void MapEndPoints()
 
     app.MapPost("/addAttempt", async (EmailAttempt emailAttempt) =>
     {
-        return await service.AddEmailAttempt(emailAttempt) ? Results.Ok(new { result = "ok", email = emailAttempt.Email}) : Results.Problem("Adding attempt failed");
+        var (email, campaignId) = await service.AddEmailAttempt(emailAttempt);
+        return email != null ? Results.Ok(new { result = "ok", email, campaignId }) : Results.Problem("Adding attempt failed");
     })
     .WithName("addAttempt");
 
@@ -59,6 +56,33 @@ void MapEndPoints()
         return email != null ? Results.Ok(new { result = "ok", email }) : Results.Problem("Removing attempt failed");
     })
     .WithName("removeAttempt");
+
+    app.MapGet("/getAllCampaigns", async () =>
+    {
+        return await service.GetAllCampaigns();
+    })
+    .WithName("getAllCampaigns");
+
+    app.MapPost("/addCampaign", async (Campaign campaign) =>
+    {
+        var id = await service.AddCampaign(campaign);
+        return id != null ? Results.Ok(new { result = "ok", id }) : Results.Problem("Adding campaign failed");
+    })
+    .WithName("addCampaign");
+
+    app.MapDelete("/removeCampaign", async (int id) =>
+    {
+        await service.RemoveCampaign(id);
+        return Results.Ok(new { result = "ok" });
+    })
+    .WithName("removeCampaign");
+
+    app.MapPost("/updateCampaign", async (int id, CampaignStatus? status, string? name, string? subject, string? body, string? sender) =>
+    {
+        var returnId = await service.UpdateCampaign(id, status, name, subject, body, sender);
+        return returnId != null ? Results.Ok(new { result = "ok", returnId }) : Results.Problem("Updating campaign failed");
+    })
+    .WithName("updateCampaign");
 }
 
 
