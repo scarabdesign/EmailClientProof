@@ -1,8 +1,18 @@
 ﻿
 namespace EmailClient.ApiService
 {
-    public class Service(EmailClientData emailClientData, ILogger<Service> logger)
+    public class Service(EmailClientData emailClientData, Queue queue, ILogger<Service> logger)
     {
+        public void StartQueue()
+        {
+            queue.StartQueue();
+        }
+
+        public void StopQueue()
+        {
+            queue.StopQueue();
+        }
+
         public async Task<List<EmailAttempt>?> GetAllEmailAttempts()
         {
             try
@@ -24,6 +34,7 @@ namespace EmailClient.ApiService
                 if (await emailClientData.CampaignExists(emailAttempt.CampaignId))
                 {
                     await emailClientData.AddEmailAttempt(emailAttempt);
+                    StartQueue();
                     return (emailAttempt.Email, emailAttempt.CampaignId);
                 }
                 else
@@ -93,11 +104,11 @@ namespace EmailClient.ApiService
             return null;
         }
 
-        public async Task<int?> UpdateCampaign(int id, CampaignStatus? status, string? name, string? subject, string? body, string? sender)
+        public async Task<int?> UpdateCampaign(int id, string? name, string? subject, string? body, string? sender)
         {
             try
             {
-                await emailClientData.UpdateCampaign(id, status, name, subject, body, sender);
+                await emailClientData.UpdateCampaign(id, name, subject, body, sender);
                 return id;
             }
             catch (Exception ex)

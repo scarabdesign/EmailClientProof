@@ -21,19 +21,6 @@ namespace EmailClient.ApiService
             return targetAttempt.Email;
         }
 
-        private async Task UpdateEmailAttempt(int id, EmailStatus? status, int? attempts, string? result, int? errorCode, DateTime? attempTime)
-        {
-            var targetAttempt = dbContext.EmailAttempts.FirstOrDefault(a => a.Id == id);
-            if (targetAttempt == null) return;
-            targetAttempt.Status = status ?? targetAttempt.Status;
-            targetAttempt.Attempts = attempts ?? targetAttempt.Attempts;
-            targetAttempt.Result = result ?? targetAttempt.Result;
-            targetAttempt.ErrorCode = errorCode ?? targetAttempt.ErrorCode;
-            targetAttempt.LastAttempt = attempTime ?? targetAttempt.LastAttempt;
-            dbContext.EmailAttempts.Update(targetAttempt);
-            await dbContext.SaveChangesAsync();
-        }
-
         public async Task<List<Campaign>> GetAllCampaigns() =>
             await dbContext.Campaigns.AsNoTracking().ToListAsync();
 
@@ -55,11 +42,10 @@ namespace EmailClient.ApiService
             await dbContext.SaveChangesAsync();
         }
 
-        public async Task UpdateCampaign(int id, CampaignStatus? status, string? name, string? subject, string? body, string? sender)
+        public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? sender)
         {
             var targetCampaign = dbContext.Campaigns.FirstOrDefault(c => c.Id == id);
             if (targetCampaign == null) return;
-            targetCampaign.Status = status ?? targetCampaign.Status;
             targetCampaign.Name = name ?? targetCampaign.Name;
             targetCampaign.Subject = subject ?? targetCampaign.Subject;
             targetCampaign.Body = body ?? targetCampaign.Body;

@@ -18,6 +18,11 @@ namespace EmailClient.ApiService
         }
     }
 
+    public class QueueContext(DbContextOptions<QueueContext> options) : DbContext(options) 
+    {
+        public DbSet<EmailAttempt> EmailAttempts { get; set; }
+    }
+
     [PrimaryKey(nameof(Id))]
     public class EmailAttempt
     {
@@ -43,7 +48,6 @@ namespace EmailClient.ApiService
         public required string Subject { get; set; }
         public required string Body { get; set; }
         public required string Sender { get; set; }
-        public CampaignStatus Status { get; set; } = CampaignStatus.NotStarted;
         public DateTime Created { get; set; } = DateTime.UtcNow;
         public DateTime Updated { get; set; } = DateTime.UtcNow;
         public List<EmailAttempt>? EmailAttempts { get; set; } = new List<EmailAttempt>();
@@ -55,12 +59,5 @@ namespace EmailClient.ApiService
         InProgress,
         Sent,
         Failed,
-    }
-
-    public enum CampaignStatus
-    {
-        NotStarted,
-        InProgress,
-        Completed,
     }
 }
