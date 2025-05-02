@@ -1,10 +1,18 @@
 ﻿@page "/email"
+@rendermode InteractiveServer
+
+@inject NavigationManager Navigation
+@inject EmailApiClient EmailApi
+@inject IHttpMessageHandlerFactory HttpMessageHandlerFactory
+
+@using System.Text.Json;
+
 @using EmailClient.ApiService
+@using Microsoft.AspNetCore.SignalR.Client
 @using static EmailClient.Web.EmailApiClient
+
 @attribute [StreamRendering(true)]
 @attribute [OutputCache(Duration = 5)]
-
-@inject EmailApiClient EmailApi
 
 <PageTitle>Email Client</PageTitle>
 
@@ -16,6 +24,7 @@
 }
 else
 {
+    <button class="btn btn-primary" @onclick="RefreshData">Click me</button>
     <table class="table">
         <thead>
             <tr>
@@ -42,10 +51,53 @@ else
 }
 
 @code {
+
+    private void RefreshData() => RefreshData(null);
+
     private List<EmailAttempt>? emailAttempts;
+    private HubConnection? hubConnection;
+
+    private JsonSerializerOptions jOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    private async void WsConnect()
+    {
+        //Initialize SignalR connection
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://apiservice/clientHub", HttpMessageHandlerFactory)
+            .Build();
+
+        hubConnection.On<string>("ReceiveUpdate", async (message) =>
+        {
+            await InvokeAsync(() => RefreshData(message));
+        });
+
+        await hubConnection.StartAsync();
+    }
 
     protected override async Task OnInitializedAsync()
     {
         emailAttempts = await EmailApi.GetAllAttempts();
+        WsConnect();
+    }
+
+    private void RefreshData(string? newAttempts = null)
+    {
+        if (newAttempts != null)
+        {
+            emailAttempts = JsonSerializer.Deserialize<List<EmailAttempt>>(newAttempts, jOpts);
+        }
+        //emailAttempts = await EmailApi.GetAllAttempts();
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
     }
 }

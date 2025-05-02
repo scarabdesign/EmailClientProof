@@ -5,7 +5,7 @@
         public static void MapEndPoints(WebApplication app)
         {
             var service = app.Services.CreateScope().ServiceProvider.GetRequiredService<Service>();
-
+            
             app.MapGet("/startQueue", service.StartQueue).WithName("startQueue");
             app.MapGet("/stopQueue", service.StopQueue).WithName("stopQueue");
 

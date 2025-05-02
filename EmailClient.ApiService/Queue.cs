@@ -1,9 +1,10 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace EmailClient.ApiService
 {
-    public class Queue(QueueContext queueContext, ILogger<Queue> logger)
+    public class Queue(QueueContext queueContext, MessageService messageService, ILogger<Queue> logger)
     {
         private readonly int MaxAttempts = 3;
         private int LoopInSeconds = 1;
@@ -54,6 +55,9 @@ namespace EmailClient.ApiService
             await queueContext.EmailAttempts.AsNoTracking()
             .Where(e => (e.Status == EmailStatus.Unsent) || (e.Status == EmailStatus.Failed && e.Attempts < MaxAttempts)).ToListAsync();
 
+        public async Task<List<EmailAttempt>?> GetAllEmailAttempts() =>
+            await queueContext.EmailAttempts.AsTracking(QueryTrackingBehavior.NoTracking).ToListAsync();
+
         public async Task UpdateEmailAttempt(int id, EmailStatus? status, DateTime? attempTime = null, int? attempts = null, string? result = null, int? errorCode = null)
         {
             var targetAttempt = queueContext.EmailAttempts.FirstOrDefault(a => a.Id == id);
@@ -88,11 +92,13 @@ namespace EmailClient.ApiService
                     await UpdateEmailAttempt(attempt.Id, EmailStatus.InProgress, DateTime.UtcNow, ++attempt.Attempts);
 
                     // Simulate sending email
-                    await Task.Delay(5000);
+                    await Task.Delay(1000);
 
 
                     await UpdateEmailAttempt(attempt.Id, EmailStatus.Sent, DateTime.UtcNow);
                 }
+                var allAttempts = await GetAllEmailAttempts() ?? [];
+                await messageService.AttemptsUpdated(allAttempts);
             }
             catch (Exception ex)
             {

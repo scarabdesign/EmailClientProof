@@ -13,18 +13,25 @@ builder.Logging.AddConsole();
 
 builder.Services.AddCors(c =>
 {
-    c.AddPolicy("AllowOrigin", opts => opts.AllowAnyOrigin());
+    c.AddPolicy("CorsPolicy", opts =>
+    {
+        opts.AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
 });
 builder.Services.AddProblemDetails();
 
+builder.Services.AddSignalR();
 builder.Services.AddScoped<EmailClientData>();
 builder.Services.AddScoped<Service>();
 builder.Services.AddScoped<Queue>();
+builder.Services.AddSingleton<MessageService>();
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseCors(opts => opts.AllowAnyOrigin());
+app.UseCors("CorsPolicy");
 
 Routes.MapEndPoints(app);
 
@@ -33,6 +40,8 @@ app.Use(async (context, next) =>
     await EnsureCreated();
     await next();
 });
+
+app.MapHub<MessageHub>("/clientHub");
 
 app.MapDefaultEndpoints().Run();
 
