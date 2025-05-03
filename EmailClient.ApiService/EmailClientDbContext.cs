@@ -50,7 +50,7 @@ namespace EmailClient.ApiService
         public required string Sender { get; set; }
         public DateTime Created { get; set; } = DateTime.UtcNow;
         public DateTime Updated { get; set; } = DateTime.UtcNow;
-        public List<EmailAttempt>? EmailAttempts { get; set; } = new List<EmailAttempt>();
+        public List<EmailAttempt> EmailAttempts { get; set; } = new List<EmailAttempt>();
     }
 
     public enum EmailStatus

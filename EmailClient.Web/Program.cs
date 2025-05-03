@@ -13,6 +13,7 @@ builder.Services.AddRazorComponents()
     .AddAuthenticationStateSerialization();
 
 builder.Services.AddOutputCache();
+builder.Services.AddBlazorBootstrap();
 
 builder.Services.AddHttpClient<EmailApiClient>(client => client.BaseAddress = new("http://apiservice"));
 

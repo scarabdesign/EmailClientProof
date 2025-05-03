@@ -4,8 +4,8 @@ namespace EmailClient.ApiService
 {
     public class EmailClientData(EmailClientDbContext dbContext)
     {
-        public async Task<List<EmailAttempt>?> GetAllEmailAttempts() => 
-            await dbContext.EmailAttempts.AsTracking(QueryTrackingBehavior.NoTracking).ToListAsync();
+        public async Task<List<EmailAttempt>?> GetAllEmailAttempts(int campaignId) => 
+            await dbContext.EmailAttempts.Where(e => e.CampaignId == campaignId).AsTracking(QueryTrackingBehavior.NoTracking).ToListAsync();
 
         public async Task AddEmailAttempt(EmailAttempt emailAttempt) {
             dbContext.EmailAttempts.Add(emailAttempt);
@@ -23,6 +23,9 @@ namespace EmailClient.ApiService
 
         public async Task<List<Campaign>> GetAllCampaigns() =>
             await dbContext.Campaigns.AsNoTracking().ToListAsync();
+
+        public async Task<Campaign?> GetCampaign(int campaignId) =>
+            await dbContext.Campaigns.AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
 
         public async Task<bool> CampaignExists(int id) =>
             await dbContext.Campaigns.AsNoTracking().AnyAsync(c => c.Id == id);

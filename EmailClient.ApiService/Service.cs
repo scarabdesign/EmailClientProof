@@ -1,7 +1,9 @@
 ﻿
+using static EmailClient.ApiService.Dto;
+
 namespace EmailClient.ApiService
 {
-    public class Service(EmailClientData emailClientData, Queue queue, ILogger<Service> logger)
+    public class Service(EmailClientData emailClientData, Queue queue, MessageService messageService, ILogger<Service> logger)
     {
         public void StartQueue()
         {
@@ -13,11 +15,11 @@ namespace EmailClient.ApiService
             queue.StopQueue();
         }
 
-        public async Task<List<EmailAttempt>?> GetAllEmailAttempts()
+        public async Task<List<EmailAttemptDto>?> GetAllEmailAttempts(int campaignId)
         {
             try
             {
-                return await emailClientData.GetAllEmailAttempts();
+                return EmailAttemptDto.ToDtoList(await emailClientData.GetAllEmailAttempts(campaignId));
             }
             catch (Exception ex)
             {
@@ -27,15 +29,19 @@ namespace EmailClient.ApiService
             return null;
         }
 
-        public async Task<(string?, int?)> AddEmailAttempt(EmailAttempt emailAttempt)
+        public async Task<(string?, int?)> AddEmailAttempt(EmailAttemptDto emailAttempt)
         {
             try
             {
                 if (await emailClientData.CampaignExists(emailAttempt.CampaignId))
                 {
-                    await emailClientData.AddEmailAttempt(emailAttempt);
-                    StartQueue();
-                    return (emailAttempt.Email, emailAttempt.CampaignId);
+                    var emailAttemptModel = EmailAttemptDto.ToEntity(emailAttempt);
+                    if (emailAttemptModel != null)
+                    {
+                        await emailClientData.AddEmailAttempt(emailAttemptModel);
+                        StartQueue();
+                        return (emailAttempt.Email, emailAttempt.CampaignId);
+                    }
                 }
                 else
                 {
@@ -64,11 +70,11 @@ namespace EmailClient.ApiService
             return null;
         }
 
-        public async Task<List<Campaign>?> GetAllCampaigns()
+        public async Task<List<CampaignDto>?> GetAllCampaigns()
         {
             try
             {
-                return await emailClientData.GetAllCampaigns();
+                return CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns());
             }
             catch (Exception ex)
             {
@@ -77,11 +83,35 @@ namespace EmailClient.ApiService
             return null;
         }
 
-        public async Task<int?> AddCampaign(Campaign campaign)
+        public async Task<CampaignDto?> GetCampaign(int id)
         {
             try
             {
-                return await emailClientData.AddCampaign(campaign);
+                return CampaignDto.ToDto(await emailClientData.GetCampaign(id));
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while retrieving campaigns: {ErrorMessage}", ex.Message);
+            }
+            return null;
+        }
+
+        public async Task<int?> AddCampaign(CampaignDto campaign)
+        {
+            try
+            {
+                var newId = 0;
+                var campaignModel = CampaignDto.ToEntity(campaign);
+                if (campaignModel != null)
+                {
+                    newId = await emailClientData.AddCampaign(campaignModel);
+                }
+
+                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
+                if (newId > 0)
+                {
+                    return newId;
+                }
             }
             catch (Exception ex)
             {

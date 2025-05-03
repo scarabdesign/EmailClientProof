@@ -1,7 +1,145 @@
 ﻿@page "/"
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+@inject NavigationManager Navigation
+@inject EmailApiClient EmailApi
+@inject IHttpMessageHandlerFactory HttpMessageHandlerFactory
 
-<h1>Hello, world!</h1>
+@using System.Text.Json;
+@using EmailClient.ApiService
+@using Microsoft.AspNetCore.SignalR.Client
+@using static EmailClient.ApiService.Dto
+@using static EmailClient.Web.EmailApiClient
+@using System.ComponentModel.DataAnnotations
 
-Welcome to your new app.
+@attribute [StreamRendering(true)]
+@attribute [OutputCache(Duration = 5)]
+
+<PageTitle>Email Client</PageTitle>
+
+<h1>Email Campaigns</h1>
+
+@if (CampaignList == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Subject</th>
+                <th>Sender</th>
+                <th aria-label="Number of emails in campaign">Count</th>
+                <th aria-label="Date/time of last update">Updated</th>
+                <th aria-label="Date/time of creation">Create</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var campaign in CampaignList)
+            {
+                <tr>
+                    <td>
+                        <button aria-label="Edit Campaign" class="btn btn-primary" @onclick=@(() => EditCampaign(campaign.Id))>✎</button>
+                    </td>
+                    <td>@campaign.Name</td>
+                    <td>@campaign.Subject</td>
+                    <td>@campaign.Sender</td>
+                    <td>@campaign.EmailCount</td>
+                    <td>@campaign.Updated.ToShortDateString() : @campaign.Updated.ToShortTimeString()</td>
+                    <td>@campaign.Created.ToShortDateString() : @campaign.Created.ToShortTimeString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @* 
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Status</th>
+                <th aria-label="Number of attempts">Attempts</th>
+                <th aria-label="First attempt date/time">First Attempt</th>
+                <th aria-label="Last attempt date/time">Last Attempt</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var attempt in emailAttempts)
+            {
+                <tr>
+                    <td>@attempt.Email</td>
+                    <td>@attempt.Status.ToString()</td>
+                    <td>@attempt.Attempts.ToString()</td>
+                    <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
+                    <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    *@
+}
+
+@code {
+
+    private List<EmailClient.ApiService.Dto.CampaignDto>? CampaignList;
+    private HubConnection? hubConnection;
+
+    private JsonSerializerOptions jOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    private void EditCampaign(int id)
+    {
+        Navigation.NavigateTo($"editcompaign/{id}");
+    }
+
+    private async void WsConnect()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://apiservice/clientHub", HttpMessageHandlerFactory)
+            .Build();
+
+        hubConnection.On<string>("ReceiveUpdate", async (message) =>
+        {
+            await InvokeAsync(() => RefreshData(message));
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        CampaignList = await EmailApi.GetAllCampaigns();
+        WsConnect();
+    }
+
+    private void RefreshData(string? status = null)
+    {
+        if (status != null)
+        {
+            var statusObj = JsonSerializer.Deserialize<StatusDto>(status, jOpts);
+            if (statusObj != null)
+            {
+                if (statusObj.Campaigns != null)
+                {
+                    CampaignList = statusObj.Campaigns;
+                }
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

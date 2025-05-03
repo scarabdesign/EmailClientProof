@@ -1,0 +1,99 @@
+﻿@page "/editcompaign"
+
+@page "/editcompaign/{CurrentCampaignId:int}"
+
+@using System.ComponentModel.DataAnnotations
+@using EmailClient.ApiService
+@inject EmailApiClient EmailApi
+
+<style>
+    .valid.modified:not([type=checkbox]) {
+    outline: 1px solid #26b050;
+    }
+
+    .invalid {
+    outline: 1px solid red;
+    }
+
+    .validation-message {
+    color: red;
+    }
+</style>
+
+@if (CurrentCampaign == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm EditContext="@editContext" OnValidSubmit="HandleOnValidSubmit" FormName="EditCampaign">
+        <DataAnnotationsValidator />
+        <div class="form-group row mb-3">
+            <label class="col-md-2 col-form-label">Campaign Title: <span class="text-danger">*</span></label>
+            <div class="col-md-10">
+                <TextInput @bind-Value="@CurrentCampaign.Name" Placeholder="Enter first name" />
+                <ValidationMessage For="@(() => CurrentCampaign.Name)" />
+            </div>
+        </div>
+
+        <div class="form-group row mb-3">
+            <label class="col-md-2 col-form-label">Last Name: <span class="text-danger">*</span></label>
+            <div class="col-md-10">
+                <TextInput @bind-Value="@CurrentCampaign.Subject" Placeholder="Enter last name" />
+                <ValidationMessage For="@(() => CurrentCampaign.Subject)" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 text-right">
+                <Button Type="ButtonType.Submit" Color="ButtonColor.Success" Class="float-end me-2">Submit</Button>
+            </div>
+        </div>
+
+    </EditForm>
+}
+
+
+@code {
+    [SupplyParameterFromForm]
+    private EmailClient.ApiService.Dto.CampaignDto? CurrentCampaign { get; set; }
+
+    private EditContext? editContext;
+
+    [Parameter]
+    public int CurrentCampaignId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (CurrentCampaignId == 0)
+        {
+            CurrentCampaign = new()
+            {
+                Body = string.Empty,
+                Name = string.Empty,
+                Sender = string.Empty,
+                Subject = string.Empty,
+            };
+        }
+        else
+        {
+            CurrentCampaign = await EmailApi.GetCampaign(CurrentCampaignId);
+        }
+        if (CurrentCampaign != null)
+        {
+            editContext = new EditContext(CurrentCampaign);
+        }
+        base.OnInitialized();
+    }
+
+    public void HandleOnValidSubmit()
+    {
+        // additional check
+        if (editContext?.Validate() ?? false)
+        {
+            // do something
+            // submit the form
+            Console.WriteLine("Form submitted successfully");
+        }
+    }
+}

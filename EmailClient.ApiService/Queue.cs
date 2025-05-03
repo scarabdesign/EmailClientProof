@@ -97,8 +97,8 @@ namespace EmailClient.ApiService
 
                     await UpdateEmailAttempt(attempt.Id, EmailStatus.Sent, DateTime.UtcNow);
                 }
-                var allAttempts = await GetAllEmailAttempts() ?? [];
-                await messageService.AttemptsUpdated(allAttempts);
+                //var allAttempts = await GetAllEmailAttempts() ?? [];
+                //await messageService.AttemptsUpdated(allAttempts);
             }
             catch (Exception ex)
             {
