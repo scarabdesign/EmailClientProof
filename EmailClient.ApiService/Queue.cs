@@ -57,10 +57,10 @@ namespace EmailClient.ApiService
         public async Task<List<EmailAttempt>?> GetUnsentEmailAttempts() =>
             await queueContext.EmailAttempts.AsNoTracking()
             .Include(e => e.Campaign)
-            .Where(e => (e.Status == EmailStatus.Unsent) || (e.Status == EmailStatus.Failed && e.Attempts < MaxAttempts)).ToListAsync();
+            .Where(e => (e.Status == EmailStatus.Unsent) || (e.Status == EmailStatus.Failed && e.Attempts < MaxAttempts))
+            .OrderBy(e => e.CampaignId)
+            .ToListAsync();
 
-        //public async Task<List<EmailAttempt>?> GetAllEmailAttempts() =>
-        //    await queueContext.EmailAttempts.AsTracking(QueryTrackingBehavior.NoTracking).ToListAsync();
         public async Task<Campaign?> GetCampaign(int campaignId) =>
             await queueContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
 
@@ -84,13 +84,18 @@ namespace EmailClient.ApiService
                 await messageService.AttemptsUpdated(camp);
         }
 
-        private async Task<ISmtpClient> GetEmailClient()
+        private async Task<ISmtpClient> GetEmailClient(string? username = null)
         {
-            var host = configuration["ExternalEmailHosts:gmail:host"];
-            var port = int.Parse(configuration["ExternalEmailHosts:gmail:port"] ?? "587");
-            var username = configuration["ExternalEmailHosts:gmail:user"];
-            var password = configuration["ExternalEmailHosts:gmail:pass"];
-            if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            if (username == null)
+            {
+                logger.LogError("Email client username is null. Returning locally hosted solution");
+                return await mailKitFactory.GetSmtpClientAsync();
+            }
+
+            var host = configuration[$"ExternalEmailHosts:{username}:host"];
+            var port = int.Parse(configuration[$"ExternalEmailHosts:{username}:port"] ?? "587");
+            var password = configuration[$"ExternalEmailHosts:{username}:pass"];
+            if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(password))
             {
                 logger.LogError("Email client configuration is missing. Returning locally hosted solution");
                 return await mailKitFactory.GetSmtpClientAsync();
@@ -101,39 +106,62 @@ namespace EmailClient.ApiService
             );
         }
 
+        private static async Task CloseSmtpConnection(ISmtpClient? smtpClient = null)
+        {
+            if (smtpClient != null)
+            {
+                await smtpClient.DisconnectAsync(true);
+                smtpClient.Dispose();
+            }
+        }
+
         private async Task ProcessQueue()
         {
             try
             {
                 var emailAttempts = await GetUnsentEmailAttempts();
-                if (emailAttempts == null || !emailAttempts.Any())
+                if (emailAttempts == null || emailAttempts.Count == 0)
                 {
                     logger.LogInformation("No email attempts to process.");
                     StopQueue();
                     return;
                 }
 
-                var smtpClient = await GetEmailClient();
-
+                ISmtpClient? smtpClient = null;
+                int currentCampaignId = -1;
                 foreach (var attempt in emailAttempts)
                 {
                     if (!QueueRunning)
                     {
+                        await CloseSmtpConnection(smtpClient);
                         return;
                     }
 
                     if (attempt.Campaign == null)
                     {
                         await UpdateEmailAttempt(
-                            attempt.Id, 
-                            status: EmailStatus.Failed, 
-                            attemptTime: DateTime.UtcNow, 
+                            attempt.Id,
+                            status: EmailStatus.Failed,
+                            attemptTime: DateTime.UtcNow,
                             attempt.Attempts,
                             result: "Campaign not found",
                             errorCode: 404
                         );
 
                         await SendNotify(attempt.CampaignId);
+                        continue;
+                    }
+
+                    if (attempt.CampaignId != currentCampaignId)
+                    {
+                        currentCampaignId = attempt.CampaignId;
+                        await CloseSmtpConnection(smtpClient);
+                        smtpClient = await GetEmailClient(attempt.Campaign.Sender);
+                    }
+
+                    if (smtpClient == null)
+                    {
+                        logger.LogError("SMTP client is null. Skipping email attempt: {Email}", attempt.Email);
                         continue;
                     }
 
@@ -148,7 +176,7 @@ namespace EmailClient.ApiService
                         await smtpClient.SendAsync(MimeMessage.CreateFromMailMessage(message));
                         await UpdateEmailAttempt(attempt.Id, EmailStatus.Sent, DateTime.UtcNow);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         logger.LogError(e, "Failed to send email to {Email}: {ErrorMessage}", attempt.Email, e.Message);
                         await UpdateEmailAttempt(
@@ -160,11 +188,11 @@ namespace EmailClient.ApiService
                             errorCode: 500
                         );
                     }
-                    
+
                     await SendNotify(attempt.CampaignId);
                 }
 
-                await smtpClient.DisconnectAsync(true);
+                await CloseSmtpConnection(smtpClient);
             }
             catch (Exception ex)
             {
