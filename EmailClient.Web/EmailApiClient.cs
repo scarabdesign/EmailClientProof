@@ -1,11 +1,10 @@
-using EmailClient.ApiService;
-using Microsoft.AspNetCore.SignalR.Client;
 using static EmailClient.ApiService.Dto;
 
 namespace EmailClient.Web;
 
 public class EmailApiClient(HttpClient httpClient)
 {
+
     public async Task<List<EmailAttemptDto>> GetAllAttempts(int campaignId, CancellationToken cancellationToken = default)
     {
         List<EmailAttemptDto>? attempts = null;
@@ -45,13 +44,3 @@ public class EmailApiClient(HttpClient httpClient)
 }
 
 
-public static class HubConnectionExtensions
-{
-    public static IHubConnectionBuilder WithUrl(this IHubConnectionBuilder builder, string url, IHttpMessageHandlerFactory clientFactory)
-    {
-        return builder.WithUrl(url, options =>
-        {
-            options.HttpMessageHandlerFactory = _ => clientFactory.CreateHandler();
-        });
-    }
-}

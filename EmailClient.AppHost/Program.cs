@@ -8,8 +8,11 @@ var postgres = builder.AddPostgres("postgres")
 
 var postgresdb = postgres.AddDatabase("emaildb");
 
+var maildev = builder.AddMailDev("maildev");
+
 var apiService = builder.AddProject<Projects.EmailClient_ApiService>("apiservice")
-    .WithReference(postgresdb);
+    .WithReference(postgresdb)
+    .WithReference(maildev);
 
 builder.AddProject<Projects.EmailClient_Web>("webfrontend")
     .WithExternalHttpEndpoints()

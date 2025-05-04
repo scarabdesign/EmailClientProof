@@ -14,6 +14,8 @@
   <ItemGroup>
     <ProjectReference Include="..\EmailClient.ApiService\EmailClient.ApiService.csproj" />
     <ProjectReference Include="..\EmailClient.Web\EmailClient.Web.csproj" />
+    <ProjectReference Include="..\MailDev.Hosting\MailDev.Hosting.csproj" IsAspireProjectResource="false"/>
+    
   </ItemGroup>
 
   <ItemGroup>

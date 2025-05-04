@@ -3,14 +3,13 @@
 
 @inject NavigationManager Navigation
 @inject EmailApiClient EmailApi
-@inject IHttpMessageHandlerFactory HttpMessageHandlerFactory
+@inject ServiceSocket ServiceSocket
 
 @using System.Text.Json;
 @using EmailClient.ApiService
-@using Microsoft.AspNetCore.SignalR.Client
 @using static EmailClient.ApiService.Dto
-@using static EmailClient.Web.EmailApiClient
-@using System.ComponentModel.DataAnnotations
+
+@implements IAsyncDisposable
 
 @attribute [StreamRendering(true)]
 @attribute [OutputCache(Duration = 5)]
@@ -55,39 +54,11 @@ else
             }
         </tbody>
     </table>
-
-    @* 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Status</th>
-                <th aria-label="Number of attempts">Attempts</th>
-                <th aria-label="First attempt date/time">First Attempt</th>
-                <th aria-label="Last attempt date/time">Last Attempt</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var attempt in emailAttempts)
-            {
-                <tr>
-                    <td>@attempt.Email</td>
-                    <td>@attempt.Status.ToString()</td>
-                    <td>@attempt.Attempts.ToString()</td>
-                    <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
-                    <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-    *@
 }
 
 @code {
-
+    private string SubType = "CampaignsUpdated";
     private List<EmailClient.ApiService.Dto.CampaignDto>? CampaignList;
-    private HubConnection? hubConnection;
-
     private JsonSerializerOptions jOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -98,29 +69,16 @@ else
         Navigation.NavigateTo($"editcompaign/{id}");
     }
 
-    private async void WsConnect()
-    {
-        hubConnection = new HubConnectionBuilder()
-            .WithUrl("http://apiservice/clientHub", HttpMessageHandlerFactory)
-            .Build();
-
-        hubConnection.On<string>("ReceiveUpdate", async (message) =>
-        {
-            await InvokeAsync(() => RefreshData(message));
-        });
-
-        await hubConnection.StartAsync();
-    }
-
     protected override async Task OnInitializedAsync()
     {
         CampaignList = await EmailApi.GetAllCampaigns();
-        WsConnect();
+        ServiceSocket.MessageReceived += RefreshData;
+        ServiceSocket.Subscribe(SubType);
     }
 
-    private void RefreshData(string? status = null)
+    private void RefreshData(string subType, string? status = null)
     {
-        if (status != null)
+        if (subType == SubType && status != null)
         {
             var statusObj = JsonSerializer.Deserialize<StatusDto>(status, jOpts);
             if (statusObj != null)
@@ -128,18 +86,14 @@ else
                 if (statusObj.Campaigns != null)
                 {
                     CampaignList = statusObj.Campaigns;
+                    InvokeAsync(StateHasChanged);
                 }
             }
         }
-
-        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (hubConnection is not null)
-        {
-            await hubConnection.DisposeAsync();
-        }
+        ServiceSocket.MessageReceived -= RefreshData;
     }
 }

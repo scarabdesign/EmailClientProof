@@ -1,10 +1,19 @@
 ﻿@page "/editcompaign"
-
 @page "/editcompaign/{CurrentCampaignId:int}"
+@rendermode InteractiveServer
 
-@using System.ComponentModel.DataAnnotations
-@using EmailClient.ApiService
 @inject EmailApiClient EmailApi
+@inject ServiceSocket ServiceSocket
+
+@using System.Text.Json
+@using EmailClient.ApiService
+@using System.ComponentModel.DataAnnotations
+@using static EmailClient.ApiService.Dto
+
+@implements IAsyncDisposable
+
+@attribute [StreamRendering(true)]
+@attribute [OutputCache(Duration = 5)]
 
 <style>
     .valid.modified:not([type=checkbox]) {
@@ -51,17 +60,66 @@ else
         </div>
 
     </EditForm>
+
+    @if (SavedChanges && !editContext.IsModified())
+    {
+        <p class="alert alert-success">Changes saved successfully.</p>
+    }
+
+    <NavigationLock 
+    ConfirmExternalNavigation="@editContext.IsModified()" 
+    />
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Status</th>
+                <th aria-label="Number of attempts">Attempts</th>
+                <th aria-label="First attempt date/time">First Attempt</th>
+                <th aria-label="Last attempt date/time">Last Attempt</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var attempt in EmailAttempts)
+            {
+                <tr>
+                    <td>@attempt.Email</td>
+                    <td>@attempt.Status.ToString()</td>
+                    <td>@attempt.Attempts.ToString()</td>
+                    <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
+                    <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 
 
 @code {
     [SupplyParameterFromForm]
-    private EmailClient.ApiService.Dto.CampaignDto? CurrentCampaign { get; set; }
+    private CampaignDto? CurrentCampaign { get; set; }
 
-    private EditContext? editContext;
+    private EditContext editContext = default!;
+
+    private List<EmailAttemptDto>? EmailAttempts = new();
+
+    private bool SavedChanges = false;
+
+    private string SubType = "AttemptsUpdated";
 
     [Parameter]
     public int CurrentCampaignId { get; set; }
+
+    private JsonSerializerOptions jOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        return base.OnAfterRenderAsync(firstRender);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,9 +139,29 @@ else
         }
         if (CurrentCampaign != null)
         {
+            EmailAttempts = CurrentCampaign.EmailAttempts;
             editContext = new EditContext(CurrentCampaign);
         }
-        base.OnInitialized();
+        
+        ServiceSocket.MessageReceived += RefreshData;
+        ServiceSocket.Subscribe(SubType);
+    }
+
+    private async void RefreshData(string subType, string? status = null)
+    {
+        if (subType == SubType && status != null)
+        {
+            var statusObj = JsonSerializer.Deserialize<StatusDto>(status, jOpts);
+            if (statusObj != null)
+            {
+                if (statusObj.CurrentlyViewing != null)
+                {
+                    CurrentCampaign = statusObj.CurrentlyViewing;
+                    EmailAttempts = CurrentCampaign.EmailAttempts;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
     }
 
     public void HandleOnValidSubmit()
@@ -95,5 +173,10 @@ else
             // submit the form
             Console.WriteLine("Form submitted successfully");
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        ServiceSocket.MessageReceived -= RefreshData;
     }
 }

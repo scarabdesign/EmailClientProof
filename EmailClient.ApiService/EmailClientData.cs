@@ -22,10 +22,10 @@ namespace EmailClient.ApiService
         }
 
         public async Task<List<Campaign>> GetAllCampaigns() =>
-            await dbContext.Campaigns.AsNoTracking().ToListAsync();
+            await dbContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync();
 
         public async Task<Campaign?> GetCampaign(int campaignId) =>
-            await dbContext.Campaigns.AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
+            await dbContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
 
         public async Task<bool> CampaignExists(int id) =>
             await dbContext.Campaigns.AsNoTracking().AnyAsync(c => c.Id == id);

@@ -7,7 +7,6 @@ namespace EmailClient.ApiService
     {
         public DbSet<EmailAttempt> EmailAttempts { get; set; }
         public DbSet<Campaign> Campaigns { get; set; }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -21,6 +20,15 @@ namespace EmailClient.ApiService
     public class QueueContext(DbContextOptions<QueueContext> options) : DbContext(options) 
     {
         public DbSet<EmailAttempt> EmailAttempts { get; set; }
+        public DbSet<Campaign> Campaigns { get; set; }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<EmailAttempt>()
+                .HasOne(e => e.Campaign)
+                .WithMany(c => c.EmailAttempts)
+                .HasForeignKey(e => e.CampaignId);
+        }
     }
 
     [PrimaryKey(nameof(Id))]

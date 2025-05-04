@@ -16,6 +16,7 @@ builder.Services.AddOutputCache();
 builder.Services.AddBlazorBootstrap();
 
 builder.Services.AddHttpClient<EmailApiClient>(client => client.BaseAddress = new("http://apiservice"));
+builder.Services.AddSingleton<ServiceSocket>();
 
 var app = builder.Build();
 

@@ -13,10 +13,14 @@ public class MessageService(IHubContext<MessageHub> hubContext)
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public async Task AttemptsUpdated(List<EmailAttemptDto> emailAttempts)
+    public async Task AttemptsUpdated(CampaignDto campaign)
     {
-        var payload = JsonSerializer.Serialize(emailAttempts, jOpts);
-        await hubContext.Clients.All.SendAsync("ReceiveUpdate", payload);
+        var payload = JsonSerializer.Serialize(new StatusDto
+        {
+            CurrentlyViewing = campaign,
+            Updated = DateTime.Now
+        }, jOpts);
+        await hubContext.Clients.All.SendAsync("AttemptsUpdated", payload);
     }
 
     public async Task CampaignsUpdated(List<CampaignDto> campaigns)
@@ -26,6 +30,6 @@ public class MessageService(IHubContext<MessageHub> hubContext)
             Campaigns = campaigns,
             Updated = DateTime.Now
         }, jOpts);
-        await hubContext.Clients.All.SendAsync("ReceiveUpdate", payload);
+        await hubContext.Clients.All.SendAsync("CampaignsUpdated", payload);
     }
 }
