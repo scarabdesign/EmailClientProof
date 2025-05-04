@@ -1,12 +1,13 @@
 ﻿
 using MailKit.Client;
+using MailKit.Net.Smtp;
 using Microsoft.EntityFrameworkCore;
 using MimeKit;
 using System.Net.Mail;
 
 namespace EmailClient.ApiService
 {
-    public class Queue(QueueContext queueContext, MessageService messageService, MailKitClientFactory mailKitFactory, ILogger<Queue> logger)
+    public class Queue(QueueContext queueContext, MessageService messageService, MailKitClientFactory mailKitFactory, ILogger<Queue> logger, IConfiguration configuration)
     {
         private readonly int MaxAttempts = 3;
         private int LoopInSeconds = 5;
@@ -83,6 +84,23 @@ namespace EmailClient.ApiService
                 await messageService.AttemptsUpdated(camp);
         }
 
+        private async Task<ISmtpClient> GetEmailClient()
+        {
+            var host = configuration["ExternalEmailHosts:gmail:host"];
+            var port = int.Parse(configuration["ExternalEmailHosts:gmail:port"] ?? "587");
+            var username = configuration["ExternalEmailHosts:gmail:user"];
+            var password = configuration["ExternalEmailHosts:gmail:pass"];
+            if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                logger.LogError("Email client configuration is missing. Returning locally hosted solution");
+                return await mailKitFactory.GetSmtpClientAsync();
+            }
+
+            return await mailKitFactory.GetCustomClientAsync(
+                host, port, true, username, password
+            );
+        }
+
         private async Task ProcessQueue()
         {
             try
@@ -95,7 +113,7 @@ namespace EmailClient.ApiService
                     return;
                 }
 
-                var smtpClient = await mailKitFactory.GetSmtpClientAsync();
+                var smtpClient = await GetEmailClient();
 
                 foreach (var attempt in emailAttempts)
                 {
@@ -145,7 +163,8 @@ namespace EmailClient.ApiService
                     
                     await SendNotify(attempt.CampaignId);
                 }
-                
+
+                await smtpClient.DisconnectAsync(true);
             }
             catch (Exception ex)
             {

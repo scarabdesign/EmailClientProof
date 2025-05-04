@@ -47,4 +47,37 @@ public sealed class MailKitClientFactory(MailKitClientSettings settings) : IDisp
             throw;
         }
     }
+
+    public async Task<ISmtpClient> GetCustomClientAsync(
+        string endpoint,
+        int port = 587,
+        bool useSsl = true,
+        string? username = null,
+        string? password = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var client = new SmtpClient();
+        try
+        {
+            await client.ConnectAsync(
+                endpoint, port,
+                useSsl ? Security.SecureSocketOptions.StartTls : Security.SecureSocketOptions.Auto,
+                cancellationToken
+            );
+
+            if (useSsl && username != null && password != null)
+            {
+                await client.AuthenticateAsync(username, password, cancellationToken);
+            }
+
+            return client;
+        }
+        catch
+        {
+            await client.DisconnectAsync(true, cancellationToken);
+            client.Dispose();
+            throw;
+        }
+    }
 }
