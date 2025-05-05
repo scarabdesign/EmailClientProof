@@ -4,30 +4,33 @@
 
 @inject EmailApiClient EmailApi
 @inject ServiceSocket ServiceSocket
+@inject EmailApiClient EmailApi
 
 @using System.Text.Json
 @using EmailClient.ApiService
 @using System.ComponentModel.DataAnnotations
 @using static EmailClient.ApiService.Dto
 
-@implements IAsyncDisposable
+@implements IDisposable
 
 @attribute [StreamRendering(true)]
 @attribute [OutputCache(Duration = 5)]
 
 <style>
     .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+        outline: 1px solid #26b050;
     }
 
     .invalid {
-    outline: 1px solid red;
+        outline: 1px solid red;
     }
 
     .validation-message {
-    color: red;
+        color: red;
     }
 </style>
+
+<ConfirmDialog @ref="confirm" />
 
 @if (CurrentCampaign == null)
 {
@@ -38,83 +41,127 @@ else
     <EditForm EditContext="@editContext" OnValidSubmit="HandleOnValidSubmit" FormName="EditCampaign">
         <DataAnnotationsValidator />
         <div class="form-group row mb-3">
-            <label class="col-md-2 col-form-label">Campaign Title: <span class="text-danger">*</span></label>
+            <div class="row">
+                <div class="col-md-2 text-end">Campaign ID:</div>
+                <div class="col-md-2">@(CurrentCampaign.Id > 0 ? CurrentCampaign.Id : "New")</div>
+                <div class="col-md-8 text-right">
+                    <Button Type="ButtonType.Submit" Color="ButtonColor.Success" Class="float-end me-2">Save Campaign</Button>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group row mb-3">
+            <label class="col-md-2 col-form-label text-end">Campaign Title: <span class="text-danger">*</span></label>
             <div class="col-md-10">
-                <TextInput @bind-Value="@CurrentCampaign.Name" Placeholder="Enter first name" />
+                <TextInput @bind-Value="@CurrentCampaign.Name" Placeholder="Enter Title" />
                 <ValidationMessage For="@(() => CurrentCampaign.Name)" />
             </div>
         </div>
 
         <div class="form-group row mb-3">
-            <label class="col-md-2 col-form-label">Last Name: <span class="text-danger">*</span></label>
+            <label class="col-md-2 col-form-label text-end">Sender Address: <span class="text-danger">*</span></label>
             <div class="col-md-10">
-                <TextInput @bind-Value="@CurrentCampaign.Subject" Placeholder="Enter last name" />
+                <TextInput @bind-Value="@CurrentCampaign.Sender" Placeholder="Enter Sender" />
+                <ValidationMessage For="@(() => CurrentCampaign.Sender)" />
+            </div>
+        </div>
+
+        <div class="form-group row mb-3">
+            <label class="col-md-2 col-form-label text-end">Email Subject: <span class="text-danger">*</span></label>
+            <div class="col-md-10">
+                <TextInput @bind-Value="@CurrentCampaign.Subject" Placeholder="Enter Subject" />
                 <ValidationMessage For="@(() => CurrentCampaign.Subject)" />
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-12 text-right">
-                <Button Type="ButtonType.Submit" Color="ButtonColor.Success" Class="float-end me-2">Submit</Button>
+        <div class="form-group row mb-3">
+            <label class="col-md-2 col-form-label text-end">Email Body: <span class="text-danger">*</span></label>
+            <div class="col-md-10">
+                <TextAreaInput @bind-Value="@CurrentCampaign.Body" Placeholder="Enter email body" />
+                <ValidationMessage For="@(() => CurrentCampaign.Body)" />
             </div>
         </div>
 
+        <div class="form-group row mb-3">
+            @if (CurrentCampaignId > 0)
+            {
+                <div class="row">
+                    <div class="col-md-2 text-end">Created:</div>
+                    <div class="col-md-10">@CurrentCampaign.Created.ToShortDateString() : @CurrentCampaign.Created.ToShortTimeString()</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2 text-end">Updated:</div>
+                    <div class="col-md-10">@CurrentCampaign.Updated.ToShortDateString() : @CurrentCampaign.Updated.ToShortTimeString()</div>
+                </div>
+            }
+            <div class="row">
+                <div class="col-md-2 text-end">Recipient Count:</div>
+                <div class="col-md-10">@CurrentCampaign?.EmailCount</div>
+            </div>
+        </div>
     </EditForm>
 
-    @if (SavedChanges && !editContext.IsModified())
+    @if (EmailAttempts != null && CurrentCampaignId > 0)
     {
-        <p class="alert alert-success">Changes saved successfully.</p>
-    }
+        <div class="form-group row mb-3">
+            <label class="col-md-2 col-form-label text-end">Add Recipients: </label>
+            <div class="col-md-9">
+                <TextAreaInput @bind-Value="@newRecipients" Placeholder="Type in valid email addresses here, seperated by commas or spaces" />
+            </div>
+            <div class="col-md-1">
+                <Button Color="ButtonColor.Success" Class="me-2" @onclick=@AddRecipients>Add</Button>
+            </div>
+        </div>
 
-    <NavigationLock 
-    ConfirmExternalNavigation="@editContext.IsModified()" 
-    />
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Status</th>
-                <th aria-label="Number of attempts">Attempts</th>
-                <th aria-label="First attempt date/time">First Attempt</th>
-                <th aria-label="Last attempt date/time">Last Attempt</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var attempt in EmailAttempts)
-            {
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>@attempt.Email</td>
-                    <td>@attempt.Status.ToString()</td>
-                    <td>@attempt.Attempts.ToString()</td>
-                    <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
-                    <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th aria-label="Number of attempts">Attempts</th>
+                    <th aria-label="First attempt date/time">First Attempt</th>
+                    <th aria-label="Last attempt date/time">Last Attempt</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var attempt in EmailAttempts)
+                {
+                    <tr>
+                        <td>@attempt.Email</td>
+                        <td>@attempt.Status.ToString()</td>
+                        <td>@attempt.Attempts.ToString()</td>
+                        <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
+                        <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 }
 
 
 @code {
-    [SupplyParameterFromForm]
-    private CampaignDto? CurrentCampaign { get; set; }
-
     private EditContext editContext = default!;
-
-    private List<EmailAttemptDto>? EmailAttempts = new();
-
-    private bool SavedChanges = false;
-
-    private string SubType = "AttemptsUpdated";
 
     [Parameter]
     public int CurrentCampaignId { get; set; }
 
+    [Parameter]
+    public EventCallback<bool> CurrentCampaignUnsaved { get; set; }
+
+    [SupplyParameterFromForm]
+    private CampaignDto? CurrentCampaign { get; set; }
+
+    private List<EmailAttemptDto>? EmailAttempts = new();
+    private string AttemptsUpdated = "AttemptsUpdated";
+    private string newRecipients = string.Empty;
+    private ConfirmDialog confirm = default!;
+
     private JsonSerializerOptions jOpts = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
 
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
@@ -126,12 +173,12 @@ else
         if (CurrentCampaignId == 0)
         {
             CurrentCampaign = new()
-            {
-                Body = string.Empty,
-                Name = string.Empty,
-                Sender = string.Empty,
-                Subject = string.Empty,
-            };
+                {
+                    Body = string.Empty,
+                    Name = string.Empty,
+                    Sender = string.Empty,
+                    Subject = string.Empty,
+                };
         }
         else
         {
@@ -141,15 +188,23 @@ else
         {
             EmailAttempts = CurrentCampaign.EmailAttempts;
             editContext = new EditContext(CurrentCampaign);
+            editContext.OnFieldChanged -= FieldEdited;
+            editContext.OnFieldChanged += FieldEdited;
         }
-        
+
+        ServiceSocket.MessageReceived -= RefreshData;
         ServiceSocket.MessageReceived += RefreshData;
-        ServiceSocket.Subscribe(SubType);
+        ServiceSocket.Subscribe(AttemptsUpdated);
+    }
+
+    public async void FieldEdited(object? sender, FieldChangedEventArgs eventArgs)
+    {
+        await CurrentCampaignUnsaved.InvokeAsync(editContext.IsModified());
     }
 
     private async void RefreshData(string subType, string? status = null)
     {
-        if (subType == SubType && status != null)
+        if (subType == AttemptsUpdated && status != null)
         {
             var statusObj = JsonSerializer.Deserialize<StatusDto>(status, jOpts);
             if (statusObj != null)
@@ -157,6 +212,7 @@ else
                 if (statusObj.CurrentlyViewing != null)
                 {
                     CurrentCampaign = statusObj.CurrentlyViewing;
+                    CurrentCampaignId = CurrentCampaign.Id;
                     EmailAttempts = CurrentCampaign.EmailAttempts;
                     await InvokeAsync(StateHasChanged);
                 }
@@ -164,19 +220,82 @@ else
         }
     }
 
-    public void HandleOnValidSubmit()
+    public async void HandleOnValidSubmit()
     {
         // additional check
-        if (editContext?.Validate() ?? false)
+        if (CurrentCampaign != null && (editContext?.Validate() ?? false))
         {
-            // do something
-            // submit the form
-            Console.WriteLine("Form submitted successfully");
+            if (CurrentCampaignId == 0)
+            {
+                await EmailApi.AddCampaign(CurrentCampaign);
+            }
+            else
+            {
+                await EmailApi.UpdateCampaign(CurrentCampaign);
+            }
+            editContext.MarkAsUnmodified();
+            await CurrentCampaignUnsaved.InvokeAsync(false);
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public async void AddRecipients()
+    {
+        char[] delimiterChars = [' ', ','];
+        var trimmedRecipients = newRecipients.Split(delimiterChars).Select(r => r.Trim()).Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
+        var valid = new List<string>();
+        var invalid = new List<string>();
+        var emailValidator = new EmailAddressAttribute();
+        trimmedRecipients.ForEach(r =>
+        {
+            if (emailValidator.IsValid(r))
+            {
+                valid.Add(r);
+            }
+            else
+            {
+                invalid.Add(r);
+            }
+        });
+
+        if (invalid.Any() && !await confirm.ShowAsync(
+                title: "Invalid Email(s) detected",
+                message1: "The following addresses didn't look right: " + string.Join(", ", invalid),
+                message2: "If you've added others, you can continue to add them to the campaign, or cancel to go back and edit the input.",
+                new ConfirmDialogOptions
+                {
+                    YesButtonText = "Continue",
+                    NoButtonText = "Cancel"
+                }
+            ))
+        {
+            return;
+        };
+
+        newRecipients = string.Empty;
+        await AddRecipientsToCampaign(valid);
+    }
+
+    private async Task AddRecipientsToCampaign(List<string> emails)
+    {
+        var result = await EmailApi.AddEmailAttempts(
+            emails.Select(e => 
+                new EmailAttemptDto
+                {
+                    Email = e,
+                    CampaignId = CurrentCampaignId
+                }
+            ).ToList()
+        );
+        if (result != null)
+        {
+            EmailAttempts = result;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    void IDisposable.Dispose()
     {
         ServiceSocket.MessageReceived -= RefreshData;
+        editContext.OnFieldChanged -= FieldEdited;
     }
 }

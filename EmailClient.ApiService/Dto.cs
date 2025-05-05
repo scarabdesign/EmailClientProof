@@ -1,4 +1,6 @@
 ﻿
+using System.ComponentModel.DataAnnotations;
+
 namespace EmailClient.ApiService
 {
     public static class Dto
@@ -60,9 +62,18 @@ namespace EmailClient.ApiService
         public class CampaignDto
         {
             public int Id { get; set; }
+
+            [Required(ErrorMessage = "Campaign title is required.")]
             public required string Name { get; set; }
+
+            [Required(ErrorMessage = "Campaign Email subject is required.")]
             public required string Subject { get; set; }
+
+            [Required(ErrorMessage = "Campaign Email body is required.")]
             public required string Body { get; set; }
+
+            [Required(ErrorMessage = "Sender Email is required.")]
+            [EmailAddress(ErrorMessage = "Invalid Sender email format.")]
             public required string Sender { get; set; }
             public DateTime Created { get; set; } = DateTime.Now;
             public DateTime Updated { get; set; } = DateTime.Now;

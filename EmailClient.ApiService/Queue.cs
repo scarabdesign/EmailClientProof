@@ -1,16 +1,16 @@
-﻿
-using MailKit.Client;
+﻿using MailKit.Client;
 using MailKit.Net.Smtp;
 using Microsoft.EntityFrameworkCore;
 using MimeKit;
 using System.Net.Mail;
+using static EmailClient.ApiService.Dto;
 
 namespace EmailClient.ApiService
 {
     public class Queue(QueueContext queueContext, MessageService messageService, MailKitClientFactory mailKitFactory, ILogger<Queue> logger, IConfiguration configuration)
     {
         private readonly int MaxAttempts = 3;
-        private int LoopInSeconds = 5;
+        private readonly int LoopInSeconds = 5;
         private PeriodicTimer? timer;
         public bool QueueRunning { get; private set; } = false;
 
@@ -64,6 +64,9 @@ namespace EmailClient.ApiService
         public async Task<Campaign?> GetCampaign(int campaignId) =>
             await queueContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
 
+        public async Task<List<Campaign>> GetAllCampaigns() =>
+            await queueContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync();
+
         public async Task UpdateEmailAttempt(int id, EmailStatus? status, DateTime? attemptTime = null, int? attempts = null, string? result = null, int? errorCode = null)
         {
             var targetAttempt = queueContext.EmailAttempts.FirstOrDefault(a => a.Id == id);
@@ -79,9 +82,11 @@ namespace EmailClient.ApiService
 
         private async Task SendNotify(int campaignId)
         {
-            var camp = Dto.CampaignDto.ToDto(await GetCampaign(campaignId));
+            var camp = CampaignDto.ToDto(await GetCampaign(campaignId));
             if (camp != null)
                 await messageService.AttemptsUpdated(camp);
+
+            await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await GetAllCampaigns()));
         }
 
         private async Task<ISmtpClient> GetEmailClient(string? username = null)

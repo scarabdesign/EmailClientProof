@@ -24,6 +24,13 @@ namespace EmailClient.ApiService
             })
             .WithName("addAttempt");
 
+            app.MapPost("/addAttempts", async (List<EmailAttemptDto> emails) =>
+            {
+                var processed = await service.AddEmailAttempts(emails);
+                return processed != null ? Results.Ok(new { result = "ok", emails = processed}) : Results.Problem("Adding attempts failed");
+            })
+            .WithName("addAttempts");
+
             app.MapDelete("/removeAttempt", async (int id) =>
             {
                 var email = await service.RemoveEmailAttempt(id);
@@ -57,9 +64,9 @@ namespace EmailClient.ApiService
             })
             .WithName("removeCampaign");
 
-            app.MapPost("/updateCampaign", async (int id, string? name, string? subject, string? body, string? sender) =>
+            app.MapPost("/updateCampaign", async (CampaignDto campaign) =>
             {
-                var returnId = await service.UpdateCampaign(id, name, subject, body, sender);
+                var returnId = await service.UpdateCampaign(campaign.Id, campaign.Name, campaign.Subject, campaign.Body, campaign.Sender);
                 return returnId != null ? Results.Ok(new { result = "ok", returnId }) : Results.Problem("Updating campaign failed");
             })
             .WithName("updateCampaign");

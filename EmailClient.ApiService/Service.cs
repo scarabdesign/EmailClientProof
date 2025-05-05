@@ -23,7 +23,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving email attempts: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, "An error occurred while retrieving emailAttempt attempts: {ErrorMessage}", ex.Message);
             }
 
             return null;
@@ -45,15 +45,54 @@ namespace EmailClient.ApiService
                 }
                 else
                 {
-                    logger.LogInformation($"Campain with id: {emailAttempt.CampaignId} does not exist");
+                    logger.LogInformation("Campain with id: {CampaignId} does not exist", emailAttempt.CampaignId);
                 }
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving email attempts: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, "An error occurred while retrieving emailAttempt attempts: {ErrorMessage}", ex.Message);
             }
 
             return (null, null);
+        }
+
+        public async Task<List<EmailAttemptDto>?> AddEmailAttempts(List<EmailAttemptDto> emails)
+        {
+            try
+            {
+                var campaignId = 0;
+                foreach (var emailAttempt in emails)
+                {
+                    if (!await emailClientData.CampaignExists(emailAttempt.CampaignId))
+                    {
+                        logger.LogError("Campain with id: {campaignId} does not exist", emailAttempt.CampaignId);
+                        continue;
+                    }
+
+                    campaignId = emailAttempt.CampaignId;
+                    if (await emailClientData.CampaignExists(emailAttempt.CampaignId))
+                    {
+                        var emailAttemptModel = EmailAttemptDto.ToEntity(emailAttempt);
+                        if (emailAttemptModel != null)
+                        {
+                            await emailClientData.AddEmailAttempt(emailAttemptModel);
+                        }
+                    }
+                    else
+                    {
+                        logger.LogInformation("Campain with id: {CampaignId} does not exist", emailAttempt.CampaignId);
+                    }
+                }
+
+                StartQueue();
+                return await GetAllEmailAttempts(campaignId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while retrieving emailAttempt attempts: {ErrorMessage}", ex.Message);
+            }
+
+            return null;
         }
 
         public async Task<string?> RemoveEmailAttempt(int id)
@@ -64,7 +103,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving email attempts: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, "An error occurred while retrieving emailAttempt attempts: {ErrorMessage}", ex.Message);
             }
 
             return null;
@@ -108,6 +147,11 @@ namespace EmailClient.ApiService
                 }
 
                 await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
+
+
+                var newCampaign = await emailClientData.GetCampaign(newId);
+                var newDto = CampaignDto.ToDto(newCampaign);
+                await messageService.AttemptsUpdated(newDto);
                 if (newId > 0)
                 {
                     return newId;

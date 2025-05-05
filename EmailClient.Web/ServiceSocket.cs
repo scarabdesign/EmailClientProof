@@ -33,7 +33,7 @@ namespace EmailClient.Web
         {
             if (hubConnection is not null)
             {
-                //await hubConnection.DisposeAsync();
+                await hubConnection.DisposeAsync();
             }
         }
     }

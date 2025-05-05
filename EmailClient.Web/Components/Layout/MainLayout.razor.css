@@ -1,3 +1,7 @@
+::deep > .modal[role=dialog] {
+    --bs-modal-width: 80% !important;
+}
+
 .page {
     position: relative;
     display: flex;
