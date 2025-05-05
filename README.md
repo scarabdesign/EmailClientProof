@@ -1,4 +1,10 @@
-# EmailClient
+# Email Client Proof of Concept
+
+This is a project written in ~4 days with .NET Aspire. Aspire is designed to be readily cloud-deployable and uses a 
+micorservice type architecture, utilizing to Docker and k8 if needed. To run this project you will need:
+
+- .Net 9
+- Docker
 
 
 ## Notes

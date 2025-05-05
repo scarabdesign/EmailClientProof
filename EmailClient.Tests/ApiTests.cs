@@ -110,17 +110,18 @@ public class ApiTests
         return result;
     }
 
-    private async Task<ResponseResult?> CreateCampain(HttpClient client, int indent = 1)
+    private async Task<ResponseResult?> CreateCampain(HttpClient client, int identity = 1)
     {
         var response = await client.PostAsync("/addCampaign", 
             new StringContent(
                 JsonSerializer.Serialize(
                     new Campaign
                     {
-                        Body = $"Test Body {indent}",
-                        Name = $"Test Campaign {indent}",
+                        Body = $"Test Body {identity}",
+                        Text = $"Test Text {identity}",
+                        Name = $"Test Campaign {identity}",
                         Sender = "scarabdesign@gmail.com",
-                        Subject = $"Test Subject {indent}",
+                        Subject = $"Test Subject {identity}",
                     }
                 ), 
                 System.Text.Encoding.UTF8, 

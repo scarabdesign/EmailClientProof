@@ -10,6 +10,7 @@
 @using EmailClient.ApiService
 @using System.ComponentModel.DataAnnotations
 @using static EmailClient.ApiService.Dto
+@using System.Text.RegularExpressions
 @using TinyMCE.Blazor
 
 @implements IDisposable
@@ -247,6 +248,7 @@ else
 
         if (ValidateForm())
         {
+            CurrentCampaign.Text = Regex.Replace(CurrentCampaign.Body, "<[^>]*?>", " ").Replace("  ", " ");
             if (NewCampaign)
             {
                 NewCampaign = false;
