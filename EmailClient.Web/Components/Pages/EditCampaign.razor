@@ -1,4 +1,4 @@
-﻿@page "/editcompaign"
+﻿@page "/editcompaign/{NewCampaign:bool}"
 @page "/editcompaign/{CurrentCampaignId:int}"
 @rendermode InteractiveServer
 
@@ -10,6 +10,7 @@
 @using EmailClient.ApiService
 @using System.ComponentModel.DataAnnotations
 @using static EmailClient.ApiService.Dto
+@using TinyMCE.Blazor
 
 @implements IDisposable
 
@@ -30,6 +31,15 @@
     }
 </style>
 
+<Modal @ref="warning" Title="@WarningTitle" Id="WarningModel">
+    <BodyTemplate>
+        @WarningMessage
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="@HideWarning">Ok</Button>
+    </FooterTemplate>
+</Modal>
+
 <ConfirmDialog @ref="confirm" />
 
 @if (CurrentCampaign == null)
@@ -38,14 +48,14 @@
 }
 else
 {
-    <EditForm EditContext="@editContext" OnValidSubmit="HandleOnValidSubmit" FormName="EditCampaign">
+    <EditForm EditContext="@editContext" FormName="EditCampaign">
         <DataAnnotationsValidator />
         <div class="form-group row mb-3">
             <div class="row">
                 <div class="col-md-2 text-end">Campaign ID:</div>
                 <div class="col-md-2">@(CurrentCampaign.Id > 0 ? CurrentCampaign.Id : "New")</div>
                 <div class="col-md-8 text-right">
-                    <Button Type="ButtonType.Submit" Color="ButtonColor.Success" Class="float-end me-2">Save Campaign</Button>
+                    <Button @onclick=@HandleOnValidSubmit Color="ButtonColor.Success" Class="float-end me-2">Save Campaign</Button>
                 </div>
             </div>
         </div>
@@ -77,13 +87,19 @@ else
         <div class="form-group row mb-3">
             <label class="col-md-2 col-form-label text-end">Email Body: <span class="text-danger">*</span></label>
             <div class="col-md-10">
-                <TextAreaInput @bind-Value="@CurrentCampaign.Body" Placeholder="Enter email body" />
+                @*<TextAreaInput @bind-Value="@CurrentCampaign.Body" Placeholder="Enter email body" />*@
+                <Editor 
+                @ref="editor"
+                @bind-Value="@CurrentCampaign.Body"
+                Field="@(() => CurrentCampaign.Body)"
+                ApiKey="78fe1s9jiotp4hprfkhc1xjlt6yfn0ptkyd7ah28wxe9hyc6"
+                />
                 <ValidationMessage For="@(() => CurrentCampaign.Body)" />
             </div>
         </div>
 
         <div class="form-group row mb-3">
-            @if (CurrentCampaignId > 0)
+            @if (!NewCampaign)
             {
                 <div class="row">
                     <div class="col-md-2 text-end">Created:</div>
@@ -101,7 +117,7 @@ else
         </div>
     </EditForm>
 
-    @if (EmailAttempts != null && CurrentCampaignId > 0)
+    @if (EmailAttempts != null && !NewCampaign)
     {
         <div class="form-group row mb-3">
             <label class="col-md-2 col-form-label text-end">Add Recipients: </label>
@@ -140,12 +156,18 @@ else
     }
 }
 
-
 @code {
+
     private EditContext editContext = default!;
+    private Modal warning = default!;
+    private string WarningTitle = string.Empty;
+    private string WarningMessage = string.Empty;
 
     [Parameter]
     public int CurrentCampaignId { get; set; }
+
+    [Parameter]
+    public bool NewCampaign { get; set; }
 
     [Parameter]
     public EventCallback<bool> CurrentCampaignUnsaved { get; set; }
@@ -154,23 +176,18 @@ else
     private CampaignDto? CurrentCampaign { get; set; }
 
     private List<EmailAttemptDto>? EmailAttempts = new();
-    private string AttemptsUpdated = "AttemptsUpdated";
+    private string CampaignUpdated = "CampaignUpdated";
     private string newRecipients = string.Empty;
     private ConfirmDialog confirm = default!;
-
+    private Editor editor = default!;
     private JsonSerializerOptions jOpts = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
-    {
-        return base.OnAfterRenderAsync(firstRender);
-    }
-
     protected override async Task OnInitializedAsync()
     {
-        if (CurrentCampaignId == 0)
+        if (NewCampaign)
         {
             CurrentCampaign = new()
                 {
@@ -187,6 +204,7 @@ else
         if (CurrentCampaign != null)
         {
             EmailAttempts = CurrentCampaign.EmailAttempts;
+
             editContext = new EditContext(CurrentCampaign);
             editContext.OnFieldChanged -= FieldEdited;
             editContext.OnFieldChanged += FieldEdited;
@@ -194,7 +212,7 @@ else
 
         ServiceSocket.MessageReceived -= RefreshData;
         ServiceSocket.MessageReceived += RefreshData;
-        ServiceSocket.Subscribe(AttemptsUpdated);
+        ServiceSocket.Subscribe(CampaignUpdated);
     }
 
     public async void FieldEdited(object? sender, FieldChangedEventArgs eventArgs)
@@ -204,7 +222,7 @@ else
 
     private async void RefreshData(string subType, string? status = null)
     {
-        if (subType == AttemptsUpdated && status != null)
+        if (subType == CampaignUpdated && status != null && !NewCampaign)
         {
             var statusObj = JsonSerializer.Deserialize<StatusDto>(status, jOpts);
             if (statusObj != null)
@@ -220,13 +238,18 @@ else
         }
     }
 
-    public async void HandleOnValidSubmit()
+    private async Task<bool> HandleOnValidSubmit()
     {
-        // additional check
-        if (CurrentCampaign != null && (editContext?.Validate() ?? false))
+        if (CurrentCampaign == null)
         {
-            if (CurrentCampaignId == 0)
+            return false;
+        }
+
+        if (ValidateForm())
+        {
+            if (NewCampaign)
             {
+                NewCampaign = false;
                 await EmailApi.AddCampaign(CurrentCampaign);
             }
             else
@@ -235,11 +258,85 @@ else
             }
             editContext.MarkAsUnmodified();
             await CurrentCampaignUnsaved.InvokeAsync(false);
+            return true;
         }
+
+        ShowWarning("Problem with fields", "Some fields are missing values. Please return and fill in all required fields");
+        return false;
     }
 
-    public async void AddRecipients()
+    private bool ValidateForm()
     {
+        if (!editContext.Validate())
+        {
+            return false;
+        }
+
+        if (CurrentCampaign == null)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(CurrentCampaign.Name))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(CurrentCampaign.Sender))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(CurrentCampaign.Subject))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(CurrentCampaign.Body))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    private async void ShowWarning(string title, string message)
+    {
+        WarningTitle = title;
+        WarningMessage = message;
+        await warning.ShowAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void HideWarning()
+    {
+        await warning.HideAsync();
+        WarningTitle = string.Empty;
+        WarningMessage = string.Empty;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void AddRecipients()
+    {
+        if (editContext.IsModified())
+        {
+            if (!await confirm.ShowAsync(
+                title: "Unsaved changes",
+                message1: "You have modified the email campaign.",
+                message2: "Click continue to save before sending or cancel to go back.",
+                new ConfirmDialogOptions
+                    {
+                        YesButtonText = "Save and Continue",
+                        NoButtonText = "Cancel"
+                    }
+            )){
+                return;
+            }
+
+            if(!await HandleOnValidSubmit()){
+                return;
+            }
+        }
+
         char[] delimiterChars = [' ', ','];
         var trimmedRecipients = newRecipients.Split(delimiterChars).Select(r => r.Trim()).Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
         var valid = new List<string>();
@@ -259,18 +356,17 @@ else
 
         if (invalid.Any() && !await confirm.ShowAsync(
                 title: "Invalid Email(s) detected",
-                message1: "The following addresses didn't look right: " + string.Join(", ", invalid),
+                message1: "The following address(es) didn't look right: " + string.Join(", ", invalid),
                 message2: "If you've added others, you can continue to add them to the campaign, or cancel to go back and edit the input.",
                 new ConfirmDialogOptions
-                {
-                    YesButtonText = "Continue",
-                    NoButtonText = "Cancel"
-                }
+                    {
+                        YesButtonText = "Continue",
+                        NoButtonText = "Cancel"
+                    }
             ))
         {
             return;
-        };
-
+        }
         newRecipients = string.Empty;
         await AddRecipientsToCampaign(valid);
     }
@@ -278,12 +374,12 @@ else
     private async Task AddRecipientsToCampaign(List<string> emails)
     {
         var result = await EmailApi.AddEmailAttempts(
-            emails.Select(e => 
+            emails.Select(e =>
                 new EmailAttemptDto
-                {
-                    Email = e,
-                    CampaignId = CurrentCampaignId
-                }
+                    {
+                        Email = e,
+                        CampaignId = CurrentCampaignId
+                    }
             ).ToList()
         );
         if (result != null)

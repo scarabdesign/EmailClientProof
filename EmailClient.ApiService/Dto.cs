@@ -1,5 +1,6 @@
 ﻿
 using System.ComponentModel.DataAnnotations;
+using static EmailClient.ApiService.Dto;
 
 namespace EmailClient.ApiService
 {
@@ -13,7 +14,7 @@ namespace EmailClient.ApiService
             public int Attempts { get; set; }
             public string? Result { get; set; }
             public int ErrorCode { get; set; } = -1;
-            public DateTime Created { get; set; } = DateTime.UtcNow;
+            public DateTime Created { get; set; } = DateTime.Now;
             public DateTime? LastAttempt { get; set; }
             public required int CampaignId { get; set; }
 
@@ -27,8 +28,10 @@ namespace EmailClient.ApiService
                     Attempts = emailAttempt.Attempts,
                     Result = emailAttempt.Result,
                     ErrorCode = emailAttempt.ErrorCode,
-                    Created = DateTime.SpecifyKind(emailAttempt.Created, DateTimeKind.Local),
-                    LastAttempt = emailAttempt.LastAttempt != null ? DateTime.SpecifyKind(emailAttempt.LastAttempt ?? DateTime.UtcNow, DateTimeKind.Local) : null,
+                    Created = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(emailAttempt.Created, DateTimeKind.Utc), TimeZoneInfo.Local),
+                    LastAttempt = emailAttempt.LastAttempt != null ? 
+                        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(emailAttempt.LastAttempt ?? DateTime.UtcNow, DateTimeKind.Utc), TimeZoneInfo.Local) : 
+                        null,
                     CampaignId = emailAttempt.CampaignId
                 };
             }
@@ -52,8 +55,10 @@ namespace EmailClient.ApiService
                     Attempts = emailAttemptDto.Attempts,
                     Result = emailAttemptDto.Result,
                     ErrorCode = emailAttemptDto.ErrorCode,
-                    Created = DateTime.SpecifyKind(emailAttemptDto.Created, DateTimeKind.Utc),
-                    LastAttempt = emailAttemptDto.LastAttempt != null ? DateTime.SpecifyKind(emailAttemptDto.LastAttempt ?? DateTime.UtcNow, DateTimeKind.Utc) : null,
+                    Created = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(emailAttemptDto.Created, DateTimeKind.Local), TimeZoneInfo.Local),
+                    LastAttempt = emailAttemptDto.LastAttempt != null ? 
+                        TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(emailAttemptDto.LastAttempt ?? DateTime.Now, DateTimeKind.Local), TimeZoneInfo.Local) :
+                        null,
                     CampaignId = emailAttemptDto.CampaignId
                 };
             }
@@ -62,19 +67,16 @@ namespace EmailClient.ApiService
         public class CampaignDto
         {
             public int Id { get; set; }
-
-            [Required(ErrorMessage = "Campaign title is required.")]
+            [Required(AllowEmptyStrings = false, ErrorMessage = "Campaign title is required.")]
             public required string Name { get; set; }
-
-            [Required(ErrorMessage = "Campaign Email subject is required.")]
+            [Required(AllowEmptyStrings = false, ErrorMessage = "Campaign Email subject is required.")]
             public required string Subject { get; set; }
-
-            [Required(ErrorMessage = "Campaign Email body is required.")]
-            public required string Body { get; set; }
-
-            [Required(ErrorMessage = "Sender Email is required.")]
+            [Required(AllowEmptyStrings = false, ErrorMessage = "Campaign Sender Enmail is required.")]
             [EmailAddress(ErrorMessage = "Invalid Sender email format.")]
             public required string Sender { get; set; }
+            [Required(AllowEmptyStrings = false, ErrorMessage = "Campaign Email body is required.")]
+            public required string Body { get; set; }
+            public string? Text { get; set; }
             public DateTime Created { get; set; } = DateTime.Now;
             public DateTime Updated { get; set; } = DateTime.Now;
             public int EmailCount { get; set; } = 0;
@@ -87,10 +89,11 @@ namespace EmailClient.ApiService
                     Id = campaign.Id,
                     Name = campaign.Name,
                     Subject = campaign.Subject,
-                    Body = campaign.Body,
                     Sender = campaign.Sender,
-                    Created = DateTime.SpecifyKind(campaign.Created, DateTimeKind.Local),
-                    Updated = DateTime.SpecifyKind(campaign.Updated, DateTimeKind.Local),
+                    Body = campaign.Body,
+                    Text = campaign.Text,
+                    Created = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(campaign.Created, DateTimeKind.Utc), TimeZoneInfo.Local),
+                    Updated = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(campaign.Updated, DateTimeKind.Utc), TimeZoneInfo.Local),
                     EmailCount = campaign.EmailAttempts.Count,
                     EmailAttempts = includeAttempts == true ? [.. campaign.EmailAttempts.Select(EmailAttemptDto.ToDto)] : [],
                 };
@@ -110,10 +113,11 @@ namespace EmailClient.ApiService
                 {
                     Name = campaignDto.Name,
                     Subject = campaignDto.Subject,
-                    Body = campaignDto.Body,
                     Sender = campaignDto.Sender,
-                    Created = DateTime.SpecifyKind(campaignDto.Created, DateTimeKind.Utc),
-                    Updated = DateTime.SpecifyKind(campaignDto.Updated, DateTimeKind.Utc),
+                    Body = campaignDto.Body,
+                    Text = campaignDto.Text,
+                    Created = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(campaignDto.Created, DateTimeKind.Local), TimeZoneInfo.Local),
+                    Updated = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(campaignDto.Updated, DateTimeKind.Local), TimeZoneInfo.Local),
                 };
             }
         }

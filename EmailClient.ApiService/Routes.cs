@@ -66,7 +66,7 @@ namespace EmailClient.ApiService
 
             app.MapPost("/updateCampaign", async (CampaignDto campaign) =>
             {
-                var returnId = await service.UpdateCampaign(campaign.Id, campaign.Name, campaign.Subject, campaign.Body, campaign.Sender);
+                var returnId = await service.UpdateCampaign(campaign);
                 return returnId != null ? Results.Ok(new { result = "ok", returnId }) : Results.Problem("Updating campaign failed");
             })
             .WithName("updateCampaign");

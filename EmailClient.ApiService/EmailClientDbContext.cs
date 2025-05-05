@@ -54,8 +54,9 @@ namespace EmailClient.ApiService
         public int Id { get; set; }
         public required string Name { get; set; }
         public required string Subject { get; set; }
-        public required string Body { get; set; }
         public required string Sender { get; set; }
+        public required string Body { get; set; }
+        public required string? Text { get; set; }
         public DateTime Created { get; set; } = DateTime.UtcNow;
         public DateTime Updated { get; set; } = DateTime.UtcNow;
         public List<EmailAttempt> EmailAttempts { get; set; } = new List<EmailAttempt>();

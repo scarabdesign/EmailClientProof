@@ -25,10 +25,10 @@
 <ConfirmDialog @ref="confirm" />
 
 <Modal @ref="modal"
-        ShowCloseButton="false"
-       OnHidden="OnModalHidden"
+       ShowCloseButton="false"
        CloseOnEscape="false"
-       UseStaticBackdrop="true">
+       UseStaticBackdrop="true"
+       Id="CampaignEditor">
     <HeaderTemplate>
         <h5 class="modal-title">
             @ModalTitle
@@ -103,19 +103,23 @@ else
     private async void AddCampaign()
     {
         ModalTitle = "Add Campaign";
-        await ShowCampaignModal(0);
+        await ShowCampaignModal(new()
+        {
+            { "NewCampaign", true }
+        });
     }
 
     private async void EditCampaign(int id)
     {
         ModalTitle = "Edit Campaign";
-        await ShowCampaignModal(id);
+        await ShowCampaignModal(new()
+        {
+            { "CurrentCampaignId", id }
+        });
     }
 
-    private async Task ShowCampaignModal(int id)
+    private async Task ShowCampaignModal(Dictionary<string, object> parameters)
     {
-        var parameters = new Dictionary<string, object>();
-        parameters.Add("CurrentCampaignId", id);
         parameters.Add("CurrentCampaignUnsaved", EventCallback.Factory.Create<bool>(this, CurrentCampaignUnsaved));
         await modal.ShowAsync<EditCampaign>(title: string.Empty, parameters: parameters);
     }
@@ -134,12 +138,9 @@ else
             return;
         }
         await modal.HideAsync();
-    }
-
-    private void OnModalHidden()
-    {
-        ModalTitle = string.Empty;
         CampaignUnsaved = false;
+        ModalTitle = string.Empty;
+        await InvokeAsync(StateHasChanged);
     }
 
     private void CurrentCampaignUnsaved(bool unsaved)
@@ -172,7 +173,12 @@ else
         return await confirm.ShowAsync(
             title: "Close Window?",
             message1: "You have unsaved changes to this campaign.",
-            message2: "Close and lose changes?"
+            message2: "Close and lose changes?",
+            new ConfirmDialogOptions
+            {
+                YesButtonText = "Yes, Close",
+                NoButtonText = "Cancel and Return"
+            }
         );
     }
 

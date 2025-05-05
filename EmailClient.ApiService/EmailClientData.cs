@@ -45,14 +45,15 @@ namespace EmailClient.ApiService
             await dbContext.SaveChangesAsync();
         }
 
-        public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? sender)
+        public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? text, string? sender)
         {
             var targetCampaign = dbContext.Campaigns.FirstOrDefault(c => c.Id == id);
             if (targetCampaign == null) return;
             targetCampaign.Name = name ?? targetCampaign.Name;
             targetCampaign.Subject = subject ?? targetCampaign.Subject;
-            targetCampaign.Body = body ?? targetCampaign.Body;
             targetCampaign.Sender = sender ?? targetCampaign.Sender;
+            targetCampaign.Body = body ?? targetCampaign.Body;
+            targetCampaign.Text = text ?? targetCampaign.Text;
             targetCampaign.Updated = DateTime.UtcNow;
             dbContext.Campaigns.Update(targetCampaign);
             await dbContext.SaveChangesAsync();

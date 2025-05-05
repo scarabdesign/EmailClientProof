@@ -13,7 +13,7 @@ public class MessageService(IHubContext<MessageHub> hubContext)
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public async Task AttemptsUpdated(CampaignDto? campaign)
+    public async Task CampaignUpdated(CampaignDto? campaign)
     {
         var payloadObj = new StatusDto
         {
@@ -24,7 +24,7 @@ public class MessageService(IHubContext<MessageHub> hubContext)
             payloadObj.CurrentlyViewing = campaign;
         }
         var payload = JsonSerializer.Serialize(payloadObj, jOpts);
-        await hubContext.Clients.All.SendAsync("AttemptsUpdated", payload);
+        await hubContext.Clients.All.SendAsync("CampaignUpdated", payload);
     }
 
     public async Task CampaignsUpdated(List<CampaignDto> campaigns)

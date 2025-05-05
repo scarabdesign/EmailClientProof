@@ -1,7 +1,4 @@
-using EmailClient.ApiService;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading;
 using static EmailClient.ApiService.Dto;
 
 namespace EmailClient.Web;

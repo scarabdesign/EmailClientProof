@@ -146,12 +146,10 @@ namespace EmailClient.ApiService
                     newId = await emailClientData.AddCampaign(campaignModel);
                 }
 
-                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
-
-
                 var newCampaign = await emailClientData.GetCampaign(newId);
                 var newDto = CampaignDto.ToDto(newCampaign);
-                await messageService.AttemptsUpdated(newDto);
+                await messageService.CampaignUpdated(newDto);
+                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
                 if (newId > 0)
                 {
                     return newId;
@@ -178,12 +176,16 @@ namespace EmailClient.ApiService
             return null;
         }
 
-        public async Task<int?> UpdateCampaign(int id, string? name, string? subject, string? body, string? sender)
+        public async Task<int?> UpdateCampaign(CampaignDto campaignDto)
         {
             try
             {
-                await emailClientData.UpdateCampaign(id, name, subject, body, sender);
-                return id;
+                await emailClientData.UpdateCampaign(campaignDto.Id, campaignDto.Name, campaignDto.Subject, campaignDto.Body, campaignDto.Text, campaignDto.Sender);
+                var savedCampaign = await emailClientData.GetCampaign(campaignDto.Id);
+                var savedDto = CampaignDto.ToDto(savedCampaign);
+                await messageService.CampaignUpdated(savedDto);
+                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
+                return campaignDto.Id;
             }
             catch (Exception ex)
             {

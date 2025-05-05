@@ -3,6 +3,7 @@ using MailKit.Net.Smtp;
 using Microsoft.EntityFrameworkCore;
 using MimeKit;
 using System.Net.Mail;
+using System.Text.RegularExpressions;
 using static EmailClient.ApiService.Dto;
 
 namespace EmailClient.ApiService
@@ -67,7 +68,7 @@ namespace EmailClient.ApiService
         public async Task<List<Campaign>> GetAllCampaigns() =>
             await queueContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync();
 
-        public async Task UpdateEmailAttempt(int id, EmailStatus? status, DateTime? attemptTime = null, int? attempts = null, string? result = null, int? errorCode = null)
+        public async Task UpdateEmailAttempt(int id, EmailStatus? status,int? attempts = null, string? result = null, int? errorCode = null)
         {
             var targetAttempt = queueContext.EmailAttempts.FirstOrDefault(a => a.Id == id);
             if (targetAttempt == null) return;
@@ -75,7 +76,7 @@ namespace EmailClient.ApiService
             targetAttempt.Attempts = attempts ?? targetAttempt.Attempts;
             targetAttempt.Result = result ?? targetAttempt.Result;
             targetAttempt.ErrorCode = errorCode ?? targetAttempt.ErrorCode;
-            targetAttempt.LastAttempt = attemptTime ?? targetAttempt.LastAttempt;
+            targetAttempt.LastAttempt = DateTime.UtcNow;
             queueContext.EmailAttempts.Update(targetAttempt);
             await queueContext.SaveChangesAsync();
         }
@@ -84,7 +85,7 @@ namespace EmailClient.ApiService
         {
             var camp = CampaignDto.ToDto(await GetCampaign(campaignId));
             if (camp != null)
-                await messageService.AttemptsUpdated(camp);
+                await messageService.CampaignUpdated(camp);
 
             await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await GetAllCampaigns()));
         }
@@ -147,7 +148,6 @@ namespace EmailClient.ApiService
                         await UpdateEmailAttempt(
                             attempt.Id,
                             status: EmailStatus.Failed,
-                            attemptTime: DateTime.UtcNow,
                             attempt.Attempts,
                             result: "Campaign not found",
                             errorCode: 404
@@ -170,16 +170,22 @@ namespace EmailClient.ApiService
                         continue;
                     }
 
-                    await UpdateEmailAttempt(attempt.Id, EmailStatus.InProgress, DateTime.UtcNow, ++attempt.Attempts);
+                    await UpdateEmailAttempt(attempt.Id, EmailStatus.InProgress, ++attempt.Attempts);
                     try
                     {
-                        using var message = new MailMessage(attempt.Campaign.Sender, attempt.Email)
+                        var message = new MimeMessage
                         {
                             Subject = attempt.Campaign.Subject,
-                            Body = attempt.Campaign.Body
+                            From = { new MailboxAddress("", attempt.Campaign.Sender) },
+                            To = { new MailboxAddress("", attempt.Email) },
+                            Body = new BodyBuilder
+                            {
+                                HtmlBody = attempt.Campaign.Body,
+                                TextBody = attempt.Campaign.Text,
+                            }.ToMessageBody()
                         };
-                        await smtpClient.SendAsync(MimeMessage.CreateFromMailMessage(message));
-                        await UpdateEmailAttempt(attempt.Id, EmailStatus.Sent, DateTime.UtcNow);
+                        await smtpClient.SendAsync(message);
+                        await UpdateEmailAttempt(attempt.Id, EmailStatus.Sent);
                     }
                     catch (Exception e)
                     {
@@ -187,7 +193,6 @@ namespace EmailClient.ApiService
                         await UpdateEmailAttempt(
                             attempt.Id,
                             status: EmailStatus.Failed,
-                            attemptTime: DateTime.UtcNow,
                             attempts: attempt.Attempts,
                             result: e.Message,
                             errorCode: 500
