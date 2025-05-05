@@ -58,6 +58,7 @@ else
                 <th aria-label="Number of emails in campaign">Count</th>
                 <th aria-label="Date/time of last update">Updated</th>
                 <th aria-label="Date/time of creation">Create</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -73,7 +74,9 @@ else
             {
                 <tr>
                     <td>
-                        <button aria-label="Edit Campaign" class="btn btn-primary" @onclick=@(() => EditCampaign(campaign.Id))>✎</button>
+                        <button aria-label="Edit Campaign" class="btn btn-primary" @onclick=@(() => EditCampaign(campaign.Id))>
+                            <Icon Name="IconName.PencilFill" />
+                        </button>
                     </td>
                     <td>@campaign.Name</td>
                     <td>@campaign.Subject</td>
@@ -81,6 +84,11 @@ else
                     <td>@campaign.EmailCount</td>
                     <td>@campaign.Updated.ToShortDateString() : @campaign.Updated.ToShortTimeString()</td>
                     <td>@campaign.Created.ToShortDateString() : @campaign.Created.ToShortTimeString()</td>
+                    <td>
+                        <button aria-label="Delete Campaign" class="btn btn-primary" @onclick=@(() => DeleteCampaign(campaign.Id))>
+                            <Icon Name="IconName.Trash3Fill" />
+                        </button>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -107,6 +115,21 @@ else
         {
             { "NewCampaign", true }
         });
+    }
+
+    private async void DeleteCampaign(int id)
+    {
+        if (await confirm.ShowAsync(
+            title: "Delete Campaign?",
+            message1: "This action cannot be undone",
+            new ConfirmDialogOptions
+            {
+                YesButtonText = "Delete",
+                NoButtonText = "Cancel"
+            }
+        )){
+            await EmailApi.RemoveCampaign(id);
+        }
     }
 
     private async void EditCampaign(int id)

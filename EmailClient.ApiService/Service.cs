@@ -167,6 +167,7 @@ namespace EmailClient.ApiService
             try
             {
                 await emailClientData.RemoveCampaign(id);
+                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
                 return id;
             }
             catch (Exception ex)
