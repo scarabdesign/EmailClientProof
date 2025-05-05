@@ -1,0 +1,194 @@
+{
+	"info": {
+		"_postman_id": "14d4fb34-82a5-4176-80b3-7eec111a9ee8",
+		"name": "EmailProof",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1917619"
+	},
+	"item": [
+		{
+			"name": "getAllAttempts",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5403/getAllAttempts",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5403",
+					"path": [
+						"getAllAttempts"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "addAttempt",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email\": \"sampleRecipient@emailme.com\",\r\n    \"campaignId\": 1\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5403/addAttempt",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5403",
+					"path": [
+						"addAttempt"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "removeAttempt",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5403/removeAttempt?id=1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5403",
+					"path": [
+						"removeAttempt"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getAllCampaigns",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5403/getAllCampaigns",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5403",
+					"path": [
+						"getAllCampaigns"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "addCampaign",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n        \"name\": \"My Email Campaign from Postman\",\r\n        \"subject\": \"This is a Postman sent email\",\r\n        \"body\": \"This email was typed up in the Postman tool to test the <b>AWESOME</b> email client\",\r\n        \"sender\": \"noreplay@emailproof.com\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5403/addCampaign",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5403",
+					"path": [
+						"addCampaign"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "startQueue",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5403/startQueue",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5403",
+					"path": [
+						"startQueue"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "stopQueue",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5403/stopQueue",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5403",
+					"path": [
+						"stopQueue"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
