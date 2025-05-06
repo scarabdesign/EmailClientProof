@@ -39,6 +39,7 @@ namespace EmailClient.ApiService
                     if (emailAttemptModel != null)
                     {
                         await emailClientData.AddEmailAttempt(emailAttemptModel);
+                        await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(emailAttempt.CampaignId)));
                         StartQueue();
                         return (emailAttempt.Email, emailAttempt.CampaignId);
                     }
@@ -83,7 +84,7 @@ namespace EmailClient.ApiService
                         logger.LogInformation("Campain with id: {CampaignId} does not exist", emailAttempt.CampaignId);
                     }
                 }
-
+                await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(campaignId)));
                 StartQueue();
                 return await GetAllEmailAttempts(campaignId);
             }
@@ -146,9 +147,7 @@ namespace EmailClient.ApiService
                     newId = await emailClientData.AddCampaign(campaignModel);
                 }
 
-                var newCampaign = await emailClientData.GetCampaign(newId);
-                var newDto = CampaignDto.ToDto(newCampaign);
-                await messageService.CampaignUpdated(newDto);
+                await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(newId)));
                 await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
                 if (newId > 0)
                 {
@@ -182,9 +181,7 @@ namespace EmailClient.ApiService
             try
             {
                 await emailClientData.UpdateCampaign(campaignDto.Id, campaignDto.Name, campaignDto.Subject, campaignDto.Body, campaignDto.Text, campaignDto.Sender);
-                var savedCampaign = await emailClientData.GetCampaign(campaignDto.Id);
-                var savedDto = CampaignDto.ToDto(savedCampaign);
-                await messageService.CampaignUpdated(savedDto);
+                await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(campaignDto.Id)));
                 await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
                 return campaignDto.Id;
             }

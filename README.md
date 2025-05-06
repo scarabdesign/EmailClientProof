@@ -6,12 +6,17 @@ micorservice type architecture, utilizing Docker and k8 if needed. To run this p
 - .Net 9
 - Docker
 
+### Notes about the project
+
 When built and launched, the project will create new docker containers for PostgreSQL and the local Mail Server implimentation. The application
 uses the MailKit library to send emails. It has a local email server that can be used to test sending emails without actually sending them. To send
 using a real SMTP server, you will need supply credentials int the `appsettings.json`. More on that below.
 
 The project send POST, GET and DELETE requests from the Web service to the API service. It also uses a Signalr connection to get
 real-time updates back the the Web.
+
+# NOT PERSISTENT
+# FAILURE SETUP
 
 ## Getting Started
 
@@ -34,8 +39,8 @@ I've tried to make the application as intuitive as possible, but below would be 
 	- This will save the Campaign and allow you to put in recipients.
 3. Type in one or more recipient email addresses seperated by comma or space. Click the "Add" button.
 	- This will add the recipients to the list of email attemps at the bottom
-    - The list will update itself to show the status of the recipientattemps at the bottom
-    - The list will update itself to show the status of the recipient the emails are processed.
+    - The list will update itself to show the status of the email attemps at the bottom and will
+    update itself when it get's an update from the server.
 
 To get a glimps of what's going on under the hood, look at the running command prompt and open the link that says:
 ```bash

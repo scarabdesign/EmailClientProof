@@ -7,8 +7,8 @@ namespace EmailClient.Web
         private HubConnection? hubConnection;
         private List<string> Subs = new();
 
-        public delegate void OnMessageReceived(string type, string message);
-        public event OnMessageReceived? MessageReceived;
+        public delegate void MessageReceived(string type, string message);
+        public event MessageReceived? OnMessageReceived;
 
         public async Task WsConnect()
         {
@@ -24,7 +24,7 @@ namespace EmailClient.Web
             if (!Subs.Contains(subscription))
             {
                 hubConnection?.On<string>(subscription, message =>
-                    MessageReceived?.Invoke(subscription, message));
+                    OnMessageReceived?.Invoke(subscription, message));
                 Subs.Add(subscription);
             }
         }

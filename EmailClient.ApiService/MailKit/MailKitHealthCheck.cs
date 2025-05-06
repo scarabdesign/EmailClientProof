@@ -11,7 +11,7 @@ internal sealed class MailKitHealthCheck(MailKitClientFactory factory) : IHealth
         try
         {
             // The factory connects (and authenticates).
-            _ = await factory.GetSmtpClientAsync(cancellationToken);
+            _ = await factory.GetSmtpClientAsync(null, cancellationToken);
 
             return HealthCheckResult.Healthy();
         }

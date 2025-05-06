@@ -150,7 +150,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         CampaignList = await EmailApi.GetAllCampaigns();
-        ServiceSocket.MessageReceived += RefreshData;
+        ServiceSocket.OnMessageReceived += RefreshData;
         ServiceSocket.Subscribe(CampaignsUpdated);
     }
 
@@ -215,7 +215,7 @@ else
 
     public void Dispose()
     {
-        ServiceSocket.MessageReceived -= RefreshData;
+        ServiceSocket.OnMessageReceived -= RefreshData;
     }
 
 }

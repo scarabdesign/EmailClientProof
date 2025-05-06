@@ -146,7 +146,15 @@ else
                 {
                     <tr>
                         <td>@attempt.Email</td>
-                        <td>@attempt.Status.ToString()</td>
+                        <td>
+                            @attempt.Status.ToString() &nbsp;
+                            @if(attempt.Status == EmailStatus.Failed)
+                            {
+                                <Tooltip Class="d-inline-block" Title="@attempt.Result" Placement="TooltipPlacement.Right" role="button">
+                                    <Icon Name="IconName.ExclamationTriangleFill" Color="IconColor.Danger" />
+                                </Tooltip>
+                            }
+                        </td>
                         <td>@attempt.Attempts.ToString()</td>
                         <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
                         <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
@@ -211,8 +219,8 @@ else
             editContext.OnFieldChanged += FieldEdited;
         }
 
-        ServiceSocket.MessageReceived -= RefreshData;
-        ServiceSocket.MessageReceived += RefreshData;
+        ServiceSocket.OnMessageReceived -= RefreshData;
+        ServiceSocket.OnMessageReceived += RefreshData;
         ServiceSocket.Subscribe(CampaignUpdated);
     }
 
@@ -393,7 +401,7 @@ else
 
     void IDisposable.Dispose()
     {
-        ServiceSocket.MessageReceived -= RefreshData;
+        ServiceSocket.OnMessageReceived -= RefreshData;
         editContext.OnFieldChanged -= FieldEdited;
     }
 }

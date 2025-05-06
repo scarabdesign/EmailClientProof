@@ -31,6 +31,20 @@ namespace EmailClient.ApiService
         }
     }
 
+    public class MailKitResponseContext(DbContextOptions<MailKitResponseContext> options) : DbContext(options)
+    {
+        public DbSet<EmailAttempt> EmailAttempts { get; set; }
+        public DbSet<Campaign> Campaigns { get; set; }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<EmailAttempt>()
+                .HasOne(e => e.Campaign)
+                .WithMany(c => c.EmailAttempts)
+                .HasForeignKey(e => e.CampaignId);
+        }
+    }
+
     [PrimaryKey(nameof(Id))]
     public class EmailAttempt
     {
@@ -43,6 +57,7 @@ namespace EmailClient.ApiService
         public int ErrorCode { get; set; } = -1;
         public DateTime Created { get; set; } = DateTime.UtcNow;
         public DateTime? LastAttempt { get; set; }
+        public string? MessageId { get; set; }
         public required int CampaignId { get; set; }
         public Campaign? Campaign { get; set; }
     }
