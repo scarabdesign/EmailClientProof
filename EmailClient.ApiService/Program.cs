@@ -29,6 +29,7 @@ builder.Services.AddScoped<EmailClientData>();
 builder.Services.AddScoped<Service>();
 builder.Services.AddScoped<Queue>();
 builder.Services.AddSingleton<MessageService>();
+builder.Services.AddScoped<ContextQueue>();
 
 var app = builder.Build();
 

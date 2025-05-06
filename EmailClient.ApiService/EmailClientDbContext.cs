@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Org.BouncyCastle.Asn1.Cmp;
+using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EmailClient.ApiService
@@ -17,7 +19,7 @@ namespace EmailClient.ApiService
         }
     }
 
-    public class QueueContext(DbContextOptions<QueueContext> options) : DbContext(options) 
+    public class QueueContext(DbContextOptions<QueueContext> options) : DbContext(options)
     {
         public DbSet<EmailAttempt> EmailAttempts { get; set; }
         public DbSet<Campaign> Campaigns { get; set; }
@@ -43,6 +45,68 @@ namespace EmailClient.ApiService
                 .WithMany(c => c.EmailAttempts)
                 .HasForeignKey(e => e.CampaignId);
         }
+    }
+
+    public class ContextQueue(MailKitResponseContext mailKitResponseContext, ILogger<ContextQueue> logger) : IDisposable
+    {
+        private ConcurrentQueue<Func<MailKitResponseContext, Task<dynamic?>>> _queue = [];
+        private SemaphoreSlim _semaphore = new(1, 1);
+        private bool QueueRunning;
+
+
+        public void Enqueue(Func<MailKitResponseContext, Task<dynamic?>> action)
+        {
+            _queue.Enqueue(action);
+            if (!QueueRunning)
+            {
+                Dequeue();
+            }
+        }
+
+        private async void Dequeue()
+        {
+            QueueRunning = true;
+            while (!_queue.IsEmpty)
+            {
+                var source = new TaskCompletionSource<dynamic?>();
+                await _semaphore.WaitAsync();
+                try
+                {
+                    if (_queue.TryDequeue(out var action))
+                    {
+                        var res = await action(mailKitResponseContext);
+                        source.SetResult(res);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    source.SetException(ex);
+                    logger.LogError(ex, "Error while dequeuing");
+                    throw;
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+                await source.Task;
+            }
+
+
+            QueueRunning = false;
+        }
+
+        public int Count => _queue.Count;
+        public void Clear() => _queue.Clear();
+        public bool IsEmpty => _queue.IsEmpty;
+        public void Dispose() => _semaphore.Dispose();
+        public void DisposeQueue() => _queue = new ConcurrentQueue<Func<MailKitResponseContext, Task<dynamic?>>>();
+        public void DisposeSemaphore() => _semaphore.Dispose();
+        public void DisposeAll()
+        {
+            DisposeQueue();
+            DisposeSemaphore();
+        }
+
     }
 
     [PrimaryKey(nameof(Id))]
