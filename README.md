@@ -1,6 +1,6 @@
 # Email Client Proof of Concept
 
-This is a project written in ~4 days with .NET Aspire with .NET 9. Aspire is designed to be readily 
+This is a project written in ~4 days in .NET 9 and .NET Aspire. Aspire is designed to be readily 
 cloud-deployable and uses a microservice type architecture, utilizing containerization. To run this 
 project you will need:
 
@@ -12,7 +12,7 @@ project you will need:
 When built and launched, the project will create new docker containers for PostgreSQL and the local 
 Mail Server implementation. The application uses the MailKit library to send emails. It has a local 
 email server that can be used to test sending emails without actually sending them. To send using a 
-real SMTP server, you will need supply credentials in the `appsettings.json`. More on that below.
+real SMTP server, you will need to supply credentials in the `appsettings.json`. More on that below.
 
 The project sends POST, GET and DELETE requests from the Web service to the API service. It also uses
 a SignalR connection to get real-time updates back to the Web.
@@ -31,7 +31,7 @@ line prompt in that directory. Run the following command to build the project:
 ```bash
 dotnet build
 ```
-Then `cd` into the EmailClient.AppHost directory and run the following command to start the project:
+Then `cd` into the `EmailClient.AppHost` directory and run the following command to start the project:
 ```bash
 dotnet run
 ```
@@ -39,9 +39,9 @@ When it starts, open a browser window and go to the following URL:
 ```bash
 http://localhost:5268
 ```
-I've tried to make the application as intuitive as possible, but below would be a basic work-flow.
+I've tried to make the application as intuitive as possible, but below would be the basic work-flow.
 1. Click to create a new Campaign.
-    - This will open the Campaign editor.
+    - This will open the Campaign editor modal.
 2. Fill in all the required fields and click the "Save Campaign" button.
 	- This will save the Campaign and allow you to put in recipients.
 3. Type in one or more recipient email addresses separated by comma or space. Click the "Add" button.
@@ -58,7 +58,7 @@ click on the URL for the `maildev` service. This will open a new tab with the lo
 
 ## Sending to other SMTP servers
 To set up the application to send emails to a real SMTP server, you will need to edit the 
-`appsettings.json` file in the `EmailClient.ApiService` directory. Under `ExternalEmailHosts` there's listed 
+`appsettings.json` file in the `EmailClient.ApiService` directory. Under `ExternalEmailHosts` there's 
 an example entry for `sampleemail@gmail.com`. When using email addresses listed here as the `Sender` of a 
 campaign, the application will use the information listed here to attempt to make a connection to that SMTP 
 server.
@@ -96,13 +96,16 @@ If the web front end page is open, you should see the new campaign automatically
 - Next, go to `getAllCampains` and click `Send`. Admire the list.
 
 - Now, go to `addAttempt` and examine the body there, making changes as you see fit. Be sure the use the 
-`campaignId` of a valid campaign in the lists on the previous step. Click the `Send` button:
+`campaignId` of a valid campaign in the lists on the previous step. Click the `Send` button. Your response
+should resemble:
 ```JSON
 {
     "email": "sampleRecipient@emailme.com",
     "campaignId": 1
 }
 ```
+If the web front end page is open and the campaign editor for your target campaign is showing, you 
+should see the new email attempt automatically appear in the list.
 
 - Open the `getAllAttempts` entry. The URL will contain an `id` property which should be a valid 
 `campaignId`. Click `Send` to get a list of all the emails added to the campaign and the status of 
@@ -229,6 +232,7 @@ campaignId  : 2
 - [ ] Bring more details of errors to the front-end
 - [ ] Put email status list in separate interface
 - [ ] Make navigable with breadcrumbs; remove large modal
+- [ ] Make tables searchable and filterable
 - [ ] Use more icons
 ### Marketability
 - [ ] Give it a catchy name
@@ -236,7 +240,10 @@ campaignId  : 2
 - [ ] Create a logo/favicon
 ### Nice to haves
 - [ ] Supply names with email addresses, maybe other contact details
-- [ ] Create email bodies as templates that can be saved and use more contact details for more personalization
+- [ ] Use more contact details for more personalization
+- [ ] Create email bodies as templates that can be saved 
 - [ ] Savable email lists that can applied to campaigns
+- [ ] Allow campaigns to be archived
 - [ ] Exportable templates/lists
 - [ ] User feedback on running status of the queue
+- [ ] More metadata for campaign status (full count, processed, unprocessed, failed)
