@@ -76,6 +76,7 @@ password:
 8. Paste the App password in for `pass`.
 9. Type in `smtp.gmail.com` for `host`.
 10. Make the port `587`.
+11. Restart and test the application. Note: Email will most certainly go to the Spam folder
 
 ## Using Postman
 
@@ -140,9 +141,9 @@ When the application is running, all requests can be sent with cURL requests. An
 Postman list or in the API routes can be used. Below are some examples.
 
 ### Adding a campaign
-GitCLI:
+Linux Terminal:
 ```bash
-curl.exe --data-binary '{"name":"My Email Campaign from command line","subject":"This is a CURL sent email","body":"This email was typed up in a CLI to test the <b>AWESOME</b> email client","sender":"noreplay@emailproof.com"}' -H 'content-type: application/json;' http://localhost:5403/addCampaign
+curl --data-binary '{"name":"My Email Campaign from command line","subject":"This is a CURL sent email","body":"This email was typed up in a CLI to test the <b>AWESOME</b> email client","sender":"noreplay@emailproof.com"}' -H 'content-type: application/json;' http://localhost:5403/addCampaign
 
 {"result":"ok","id":2}
 ```
@@ -161,9 +162,9 @@ ok      2
 ```
 
 ### Adding an email
-GitCLI:
+Linux Terminal:
 ```bash
-curl.exe --data-binary '{"email": "sampleRecipient@emailme.com", "campaignId": 2}' -H 'content-type: application/json;' http://localhost:5403/addAttempt
+curl --data-binary '{"email": "sampleRecipient@emailme.com", "campaignId": 2}' -H 'content-type: application/json;' http://localhost:5403/addAttempt
 
 {"result":"ok","email":"sampleRecipient@emailme.com","campaignId":2}
 ```
@@ -180,9 +181,9 @@ ok     sampleRecipient@emailme.com          2
 ```
 
 ### Viewing campaign status
-GitCLI:
+Linux Terminal:
 ```bash
-curl.exe http://localhost:5403/getAllAttempts?id=2
+curl http://localhost:5403/getAllAttempts?id=2
 
 [{"id":1,"email":"sampleRecipient@emailme.com","status":2,"attempts":1,"result":null,"errorCode":-1,"created":"2025-05-05T14:48:47.105556-07:00","lastAttempt":"2025-05-05T14:48:52.562336-07:00","campaignId":2},{"id":2,"email":"sampleRecipient@emailme.com","status":2,"attempts":1,"result":null,"errorCode":-1,"created":"2025-05-05T14:49:46.421406-07:00","lastAttempt":"2025-05-05T14:49:51.721792-07:00","campaignId":2}]
 ```
