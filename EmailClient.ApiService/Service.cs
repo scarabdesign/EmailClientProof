@@ -107,7 +107,7 @@ namespace EmailClient.ApiService
         {
             try
             {
-                return CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns());
+                return CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns() ?? []);
             }
             catch (Exception ex)
             {
@@ -141,7 +141,7 @@ namespace EmailClient.ApiService
                 }
 
                 await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(newId)));
-                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
+                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns() ?? []));
                 if (newId > 0)
                 {
                     return newId;
@@ -159,7 +159,7 @@ namespace EmailClient.ApiService
             try
             {
                 await emailClientData.RemoveCampaign(id);
-                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
+                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns() ?? []));
                 return id;
             }
             catch (Exception ex)
@@ -175,7 +175,7 @@ namespace EmailClient.ApiService
             {
                 await emailClientData.UpdateCampaign(campaignDto.Id, campaignDto.Name, campaignDto.Subject, campaignDto.Body, campaignDto.Sender);
                 await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(campaignDto.Id)));
-                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
+                await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns() ?? []));
                 return campaignDto.Id;
             }
             catch (Exception ex)

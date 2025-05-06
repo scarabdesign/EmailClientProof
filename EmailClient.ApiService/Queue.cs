@@ -7,7 +7,6 @@ using static EmailClient.ApiService.Dto;
 namespace EmailClient.ApiService
 {
     public class Queue(
-        QueueContext queueContext,
         ContextQueue contextQueue, 
         MessageService messageService, 
         MailKitClientFactory mailKitFactory, 
@@ -16,6 +15,7 @@ namespace EmailClient.ApiService
     {
         private readonly int MaxAttempts = int.Parse(configuration[Strings.QueueConfig.MaxAttempts] ?? "3");
         private readonly int SecondsBetweenLoops = int.Parse(configuration[Strings.QueueConfig.SecondsBetweenLoops] ?? "5");
+        private readonly int SecondsBetweenErrors = int.Parse(configuration[Strings.QueueConfig.SecondsBetweenErrors] ?? "3");
         private PeriodicTimer? timer;
 
         public bool QueueRunning { get; private set; } = false;
@@ -61,61 +61,35 @@ namespace EmailClient.ApiService
         }
 
         private async Task<List<EmailAttempt>?> GetUnsentEmailAttempts() =>
-            await queueContext.EmailAttempts.AsNoTracking()
+            await contextQueue.Query(async db => await db.EmailAttempts.AsNoTracking()
                 .Include(e => e.Campaign)
                 .Where(e => (e.Status == EmailStatus.Unsent) || (e.Status == EmailStatus.Failed && e.Attempts < MaxAttempts))
                 .OrderBy(e => e.CampaignId)
-                .ToListAsync();
+                .ToListAsync());
 
-        private async Task<Campaign?> GetCampaign(int campaignId, bool isQueue)
+        private async Task<Campaign?> GetCampaign(int campaignId)
         {
-            if (isQueue)
-            {
-                return await queueContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
-            }
-            else
-            {
-                return await contextQueue.Enqueue(async context => await context.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId));
-
-            }
+            return await contextQueue.Query(async db => await db.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId));
         }
 
-        private async Task<List<Campaign>> GetAllCampaigns()
+        private async Task<List<Campaign>?> GetAllCampaigns()
         {
-
-            var result = await contextQueue.Enqueue(async context => await context.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync());
-            if (result != null)
-                return result;
-            return [];
+            return await contextQueue.Query(async db => await db.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync());
         }
             
         private async Task<EmailAttempt?> GetEmailAttemptByMessageId(string? messageId)
         {
-            return await contextQueue.Enqueue(async context => await context.EmailAttempts.AsNoTracking()
-                    .Include(e => e.Campaign)
-                    .FirstOrDefaultAsync(e =>
-                    e.MessageId == messageId));
-
+            return await contextQueue.Query(async db => await db.EmailAttempts.AsNoTracking()
+                .Include(e => e.Campaign)
+                .FirstOrDefaultAsync(e =>
+                e.MessageId == messageId));
         }
+
         private async Task UpdateEmailAttempt(int id, EmailStatus? status, int? attempts = null, string? messageId = null, string? result = null, int? errorCode = null)
         {
-            var targetAttempt = queueContext.EmailAttempts.FirstOrDefault(a => a.Id == id);
-            if (targetAttempt == null) return;
-            targetAttempt.Status = status ?? targetAttempt.Status;
-            targetAttempt.Attempts = attempts ?? targetAttempt.Attempts;
-            targetAttempt.Result = result ?? targetAttempt.Result;
-            targetAttempt.ErrorCode = errorCode ?? targetAttempt.ErrorCode;
-            targetAttempt.MessageId = messageId ?? targetAttempt.MessageId;
-            targetAttempt.LastAttempt = DateTime.UtcNow;
-            queueContext.EmailAttempts.Update(targetAttempt);
-            await queueContext.SaveChangesAsync();
-        }
-
-        private async Task UpdateEmailAttemptFromResponse(int id, EmailStatus? status, int? attempts = null, string? messageId = null, string? result = null, int? errorCode = null)
-        {
-            await contextQueue.Enqueue(async context =>
+            await contextQueue.Query(async db =>
             {
-                var targetAttempt = context.EmailAttempts.FirstOrDefault(a => a.Id == id);
+                var targetAttempt = db.EmailAttempts.FirstOrDefault(a => a.Id == id);
                 if (targetAttempt == null) return null;
                 targetAttempt.Status = status ?? targetAttempt.Status;
                 targetAttempt.Attempts = attempts ?? targetAttempt.Attempts;
@@ -123,19 +97,19 @@ namespace EmailClient.ApiService
                 targetAttempt.ErrorCode = errorCode ?? targetAttempt.ErrorCode;
                 targetAttempt.MessageId = messageId ?? targetAttempt.MessageId;
                 targetAttempt.LastAttempt = DateTime.UtcNow;
-                context.EmailAttempts.Update(targetAttempt);
-                await context.SaveChangesAsync();
+                db.EmailAttempts.Update(targetAttempt);
+                await db.SaveChangesAsync();
                 return null;
             });
         }
 
-        private async Task SendNotify(int campaignId, bool isQueue)
+        private async Task SendNotify(int campaignId)
         {
-            var camp = CampaignDto.ToDto(await GetCampaign(campaignId, isQueue));
+            var camp = CampaignDto.ToDto(await GetCampaign(campaignId));
             if (camp != null)
                 await messageService.CampaignUpdated(camp);
 
-            await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await GetAllCampaigns()));
+            await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await GetAllCampaigns() ?? []));
         }
 
         private void AddMailKitListeners()
@@ -162,8 +136,8 @@ namespace EmailClient.ApiService
             var attempt = await GetEmailAttemptByMessageId(e.Message.MessageId);
             if (attempt != null)
             {
-                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Sent, attempt.Attempts, attempt.MessageId, e.Response);
-                await SendNotify(attempt.CampaignId, false);
+                await UpdateEmailAttempt(attempt.Id, EmailStatus.Sent, attempt.Attempts, attempt.MessageId, e.Response);
+                await SendNotify(attempt.CampaignId);
             }
         }
 
@@ -172,8 +146,8 @@ namespace EmailClient.ApiService
             var attempt = await GetEmailAttemptByMessageId(message.MessageId);
             if (attempt != null)
             {
-                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Failed, attempt.Attempts, attempt.MessageId, Strings.QueueLogInfo.RecipientNotAccepted, 550);
-                await SendNotify(attempt.CampaignId, false);
+                await UpdateEmailAttempt(attempt.Id, EmailStatus.Failed, attempt.Attempts, attempt.MessageId, Strings.QueueLogInfo.RecipientNotAccepted, 550);
+                await SendNotify(attempt.CampaignId);
             }
         }
 
@@ -182,8 +156,8 @@ namespace EmailClient.ApiService
             var attempt = await GetEmailAttemptByMessageId(message.MessageId);
             if (attempt != null)
             {
-                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Failed, attempt.Attempts, message.MessageId, Strings.QueueLogInfo.RecipientNotAccepted, 550);
-                await SendNotify(attempt.CampaignId, false);
+                await UpdateEmailAttempt(attempt.Id, EmailStatus.Failed, attempt.Attempts, message.MessageId, Strings.QueueLogInfo.RecipientNotAccepted, 550);
+                await SendNotify(attempt.CampaignId);
             }
         }
 
@@ -192,8 +166,8 @@ namespace EmailClient.ApiService
             var attempt = await GetEmailAttemptByMessageId(message.MessageId);
             if (attempt != null)
             {
-                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Failed, attempt.Attempts, message.MessageId, Strings.QueueLogInfo.SenderNotAccepted, 550);
-                await SendNotify(attempt.CampaignId, false);
+                await UpdateEmailAttempt(attempt.Id, EmailStatus.Failed, attempt.Attempts, message.MessageId, Strings.QueueLogInfo.SenderNotAccepted, 550);
+                await SendNotify(attempt.CampaignId);
             }
         }
 
@@ -281,11 +255,11 @@ namespace EmailClient.ApiService
                             errorCode: 404
                         );
 
-                        await SendNotify(attempt.CampaignId, true);
+                        await SendNotify(attempt.CampaignId);
                         continue;
                     }
 
-                    if (attempt.CampaignId != currentCampaignId)
+                    if (attempt.CampaignId != currentCampaignId || smtpClient == null)
                     {
                         currentCampaignId = attempt.CampaignId;
                         await CloseSmtpConnection(smtpClient);
@@ -305,7 +279,8 @@ namespace EmailClient.ApiService
                                 errorCode: 500
                             );
 
-                            await SendNotify(attempt.CampaignId, true);
+                            await SendNotify(attempt.CampaignId);
+                            await Task.Delay(SecondsBetweenErrors * 1000);
                             continue;
                         }
                     }
@@ -332,7 +307,7 @@ namespace EmailClient.ApiService
                         };
 
                         await UpdateEmailAttempt(attempt.Id, EmailStatus.InProgress, ++attempt.Attempts, message.MessageId);
-                        await SendNotify(attempt.CampaignId, true);
+                        await SendNotify(attempt.CampaignId);
                         await smtpClient.SendAsync(message);
                     }
                     catch (Exception e)
@@ -345,7 +320,7 @@ namespace EmailClient.ApiService
                             result: e.Message,
                             errorCode: 500
                         );
-                        await SendNotify(attempt.CampaignId, true);
+                        await SendNotify(attempt.CampaignId);
                     }
                 }
 
@@ -357,9 +332,11 @@ namespace EmailClient.ApiService
             }
         }
 
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             RemoveMailKitListeners();
+            timer?.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

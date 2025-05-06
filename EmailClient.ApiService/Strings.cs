@@ -23,6 +23,7 @@ namespace EmailClient.ApiService
         {
             public const string MaxAttempts = "MaxAttempts";
             public const string SecondsBetweenLoops = "SecondsBetweenLoops";
+            public const string SecondsBetweenErrors = "SecondsBetweenErrors";
         }
 
         public static class QueueLogInfo

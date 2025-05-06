@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.EntityFrameworkCore;
-using Org.BouncyCastle.Asn1.Cmp;
+﻿using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EmailClient.ApiService
 {
+
     public class EmailClientDbContext(DbContextOptions<EmailClientDbContext> options) : DbContext(options)
     {
         public DbSet<EmailAttempt> EmailAttempts { get; set; }
@@ -20,44 +19,16 @@ namespace EmailClient.ApiService
         }
     }
 
-    public class QueueContext(DbContextOptions<QueueContext> options) : DbContext(options)
+    public class ContextQueue(EmailClientDbContext mailKitResponseContext, ILogger<ContextQueue> logger) : IDisposable
     {
-        public DbSet<EmailAttempt> EmailAttempts { get; set; }
-        public DbSet<Campaign> Campaigns { get; set; }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<EmailAttempt>()
-                .HasOne(e => e.Campaign)
-                .WithMany(c => c.EmailAttempts)
-                .HasForeignKey(e => e.CampaignId);
-        }
-    }
-
-    public class MailKitResponseContext(DbContextOptions<MailKitResponseContext> options) : DbContext(options)
-    {
-        public DbSet<EmailAttempt> EmailAttempts { get; set; }
-        public DbSet<Campaign> Campaigns { get; set; }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<EmailAttempt>()
-                .HasOne(e => e.Campaign)
-                .WithMany(c => c.EmailAttempts)
-                .HasForeignKey(e => e.CampaignId);
-        }
-    }
-
-    public class ContextQueue(MailKitResponseContext mailKitResponseContext, ILogger<ContextQueue> logger) : IDisposable
-    {
-        private ConcurrentQueue<Tuple<Func<MailKitResponseContext, Task<dynamic?>>,TaskCompletionSource<dynamic?>>> _queue = [];
+        private ConcurrentQueue<Tuple<Func<EmailClientDbContext, Task<dynamic?>>, TaskCompletionSource<dynamic?>>> _queue = [];
         private SemaphoreSlim _semaphore = new(1, 1);
         private bool QueueRunning;
 
-        public async Task<dynamic?> Enqueue(Func<MailKitResponseContext, Task<dynamic?>> action)
+        public async Task<dynamic?> Query(Func<EmailClientDbContext, Task<dynamic?>> action)
         {
             var source = new TaskCompletionSource<dynamic?>();
-            var t = new Tuple<Func<MailKitResponseContext, Task<dynamic?>>, TaskCompletionSource<dynamic?>>(action, source);
+            var t = new Tuple<Func<EmailClientDbContext, Task<dynamic?>>, TaskCompletionSource<dynamic?>>(action, source);
             _queue.Enqueue(t);
             if (!QueueRunning)
             {
@@ -96,7 +67,7 @@ namespace EmailClient.ApiService
         public void Clear() => _queue.Clear();
         public bool IsEmpty => _queue.IsEmpty;
         public void Dispose() => _semaphore.Dispose();
-        public void DisposeQueue() => _queue = new ConcurrentQueue<Tuple<Func<MailKitResponseContext, Task<dynamic?>>, TaskCompletionSource<dynamic?>>>();
+        public void DisposeQueue() => _queue = new ConcurrentQueue<Tuple<Func<EmailClientDbContext, Task<dynamic?>>, TaskCompletionSource<dynamic?>>>();
         public void DisposeSemaphore() => _semaphore.Dispose();
         public void DisposeAll()
         {

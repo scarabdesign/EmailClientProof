@@ -1,64 +1,81 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
-using static EmailClient.ApiService.Dto;
 
 namespace EmailClient.ApiService
 {
-    public class EmailClientData(EmailClientDbContext dbContext)
+    public class EmailClientData(ContextQueue contextQueue)
     {
         public async Task<List<EmailAttempt>?> GetAllEmailAttempts(int campaignId) => 
-            await dbContext.EmailAttempts.Where(e => e.CampaignId == campaignId).AsTracking(QueryTrackingBehavior.NoTracking).ToListAsync();
+            await contextQueue.Query(async db => await db.EmailAttempts.Where(e => e.CampaignId == campaignId).AsTracking(QueryTrackingBehavior.NoTracking).ToListAsync());
 
         public async Task AddEmailAttempt(EmailAttempt emailAttempt) {
-            dbContext.EmailAttempts.Add(emailAttempt);
-            await dbContext.SaveChangesAsync();
+            await contextQueue.Query(async db =>
+            {
+                db.EmailAttempts.Add(emailAttempt);
+                await db.SaveChangesAsync();
+                return null;
+            });
         }
 
         public async Task<string?> RemoveEmailAttempt(int id)
         {
-            var targetAttempt = dbContext.EmailAttempts.FirstOrDefault(a => a.Id == id);
-            if (targetAttempt == null) return null;
-            dbContext.EmailAttempts.Remove(targetAttempt);
-            await dbContext.SaveChangesAsync();
-            return targetAttempt.Email;
+            return await contextQueue.Query(async db =>
+            {
+                var targetAttempt = db.EmailAttempts.FirstOrDefault(a => a.Id == id);
+                if (targetAttempt == null) return null;
+                db.EmailAttempts.Remove(targetAttempt);
+                await db.SaveChangesAsync();
+                return targetAttempt.Email;
+            });
         }
 
-        public async Task<List<Campaign>> GetAllCampaigns() =>
-            await dbContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync();
+        public async Task<List<Campaign>?> GetAllCampaigns() =>
+            await contextQueue.Query(async db => await db.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync());
 
         public async Task<Campaign?> GetCampaign(int campaignId) =>
-            await dbContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
+            await contextQueue.Query(async db => await db.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId));
 
         public async Task<bool> CampaignExists(int id) =>
-            await dbContext.Campaigns.AsNoTracking().AnyAsync(c => c.Id == id);
+            await contextQueue.Query(async db => await db.Campaigns.AsNoTracking().AnyAsync(c => c.Id == id));
 
         public async Task<int> AddCampaign(Campaign campaign)
         {
-            dbContext.Campaigns.Add(campaign);
-            await dbContext.SaveChangesAsync();
-            return campaign.Id;
+            return await contextQueue.Query(async db =>
+            {
+                db.Campaigns.Add(campaign);
+                await db.SaveChangesAsync();
+                return campaign.Id;
+            });
         }
 
         public async Task RemoveCampaign(int id)
         {
-            var targetCampaign = dbContext.Campaigns.FirstOrDefault(c => c.Id == id);
-            if (targetCampaign == null) return;
-            dbContext.Campaigns.Remove(targetCampaign);
-            await dbContext.SaveChangesAsync();
+            await contextQueue.Query(async db =>
+            {
+                var targetCampaign = db.Campaigns.FirstOrDefault(c => c.Id == id);
+                if (targetCampaign == null) return null;
+                db.Campaigns.Remove(targetCampaign);
+                await db.SaveChangesAsync();
+                return null;
+            });
         }
 
         public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? sender)
         {
-            var targetCampaign = dbContext.Campaigns.FirstOrDefault(c => c.Id == id);
-            if (targetCampaign == null) return;
-            targetCampaign.Name = name ?? targetCampaign.Name;
-            targetCampaign.Subject = subject ?? targetCampaign.Subject;
-            targetCampaign.Sender = sender ?? targetCampaign.Sender;
-            targetCampaign.Body = body ?? targetCampaign.Body;
-            targetCampaign.Text = Regex.Replace(targetCampaign.Body, "<[^>]*?>", " ").Replace("  ", " ");
-            targetCampaign.Updated = DateTime.UtcNow;
-            dbContext.Campaigns.Update(targetCampaign);
-            await dbContext.SaveChangesAsync();
+            await contextQueue.Query(async db =>
+            {
+                var targetCampaign = db.Campaigns.FirstOrDefault(c => c.Id == id);
+                if (targetCampaign == null) return null;
+                targetCampaign.Name = name ?? targetCampaign.Name;
+                targetCampaign.Subject = subject ?? targetCampaign.Subject;
+                targetCampaign.Sender = sender ?? targetCampaign.Sender;
+                targetCampaign.Body = body ?? targetCampaign.Body;
+                targetCampaign.Text = Regex.Replace(targetCampaign.Body, "<[^>]*?>", " ").Replace("  ", " ");
+                targetCampaign.Updated = DateTime.UtcNow;
+                db.Campaigns.Update(targetCampaign);
+                await db.SaveChangesAsync();
+                return null;
+            });
         }
     }
 }

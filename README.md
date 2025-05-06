@@ -224,7 +224,6 @@ campaignId  : 2
 - [ ] Combine socket responses to send fewer updates
 - [ ] Don't reference classes in web service directly from API service.
 - [ ] Use a different rich text editor or update TinyMCE (paid) and enable HTML editing
-- [ ] Solve concurrency problems; remove duplicate dbContexts
 ### Scalability
 - [ ] Add AMQP
 - [ ] Add to K8s cluster

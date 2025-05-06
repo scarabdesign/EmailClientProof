@@ -94,7 +94,7 @@ namespace EmailClient.ApiService
                     Created = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(campaign.Created, DateTimeKind.Utc), TimeZoneInfo.Local),
                     Updated = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(campaign.Updated, DateTimeKind.Utc), TimeZoneInfo.Local),
                     EmailCount = campaign.EmailAttempts.Count,
-                    EmailAttempts = includeAttempts == true ? [.. campaign.EmailAttempts.Select(EmailAttemptDto.ToDto)] : [],
+                    EmailAttempts = includeAttempts == true ? [.. campaign.EmailAttempts.Select(EmailAttemptDto.ToDto).OrderByDescending(e => e.Id)] : [],
                 };
             }
 

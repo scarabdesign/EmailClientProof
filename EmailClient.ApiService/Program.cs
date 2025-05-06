@@ -6,8 +6,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 builder.AddNpgsqlDbContext<EmailClientDbContext>("emaildb", c => c.DisableTracing = true);
-builder.AddNpgsqlDbContext<QueueContext>("emaildb", c => c.DisableTracing = true);
-builder.AddNpgsqlDbContext<MailKitResponseContext>("emaildb", c => c.DisableTracing = true);
 
 builder.Logging.AddConsole();
 
