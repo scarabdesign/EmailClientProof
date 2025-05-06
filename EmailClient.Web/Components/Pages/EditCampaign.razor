@@ -5,12 +5,12 @@
 @inject EmailApiClient EmailApi
 @inject ServiceSocket ServiceSocket
 @inject EmailApiClient EmailApi
+@inject IConfiguration Configuration
 
 @using System.Text.Json
 @using EmailClient.ApiService
 @using System.ComponentModel.DataAnnotations
 @using static EmailClient.ApiService.Dto
-@using System.Text.RegularExpressions
 @using TinyMCE.Blazor
 
 @implements IDisposable
@@ -93,7 +93,7 @@ else
                 @ref="editor"
                 @bind-Value="@CurrentCampaign.Body"
                 Field="@(() => CurrentCampaign.Body)"
-                ApiKey="78fe1s9jiotp4hprfkhc1xjlt6yfn0ptkyd7ah28wxe9hyc6"
+                ApiKey="@Configuration["TinyMCEApiKey"]"
                 />
                 <ValidationMessage For="@(() => CurrentCampaign.Body)" />
             </div>
@@ -123,7 +123,7 @@ else
         <div class="form-group row mb-3">
             <label class="col-md-2 col-form-label text-end">Add Recipients: </label>
             <div class="col-md-9">
-                <TextAreaInput @bind-Value="@newRecipients" Placeholder="Type in valid email addresses here, seperated by commas or spaces" />
+                <TextAreaInput @bind-Value="@newRecipients" Placeholder="Type in valid email addresses here, separated by commas or spaces" />
             </div>
             <div class="col-md-1">
                 <Button Color="ButtonColor.Success" Class="me-2" @onclick=@AddRecipients>Add</Button>
@@ -256,7 +256,6 @@ else
 
         if (ValidateForm())
         {
-            CurrentCampaign.Text = Regex.Replace(CurrentCampaign.Body, "<[^>]*?>", " ").Replace("  ", " ");
             if (NewCampaign)
             {
                 NewCampaign = false;

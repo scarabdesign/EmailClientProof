@@ -1,6 +1,5 @@
-﻿
-using System.ComponentModel.DataAnnotations;
-using static EmailClient.ApiService.Dto;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace EmailClient.ApiService
 {
@@ -115,7 +114,7 @@ namespace EmailClient.ApiService
                     Subject = campaignDto.Subject,
                     Sender = campaignDto.Sender,
                     Body = campaignDto.Body,
-                    Text = campaignDto.Text,
+                    Text = campaignDto.Text ?? Regex.Replace(campaignDto.Body, "<[^>]*?>", " ").Replace("  ", " "),
                     Created = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(campaignDto.Created, DateTimeKind.Local), TimeZoneInfo.Local),
                     Updated = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(campaignDto.Updated, DateTimeKind.Local), TimeZoneInfo.Local),
                 };

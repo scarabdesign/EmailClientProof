@@ -6,7 +6,6 @@
 @inject ServiceSocket ServiceSocket
 
 @using System.Text.Json;
-@using EmailClient.ApiService
 @using static EmailClient.ApiService.Dto
 
 @implements IDisposable
@@ -65,8 +64,13 @@ else
             @if (CampaignList.Count == 0)
             {
                 <tr>
-                    <td colspan="7" class="text-center">
-                        No Email Campaigns to list: <Button Color="ButtonColor.Primary" @onclick=@AddCampaign>+</Button>
+                    <td colspan="4" class="text-end">
+                        No Email Campaigns.<br />Click to add one: 
+                    </td>
+                    <td colspan="3" class="text-start">
+                        <Button Color="ButtonColor.Primary" @onclick=@AddCampaign>
+                            <Icon Name="IconName.Plus" Size="IconSize.x4" />
+                        </Button>
                     </td>
                 </tr>
             }

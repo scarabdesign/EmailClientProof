@@ -1,6 +1,5 @@
 using EmailClient.ApiService;
 using Npgsql;
-using Org.BouncyCastle.Asn1.Ocsp;
 
 var builder = WebApplication.CreateBuilder(args);
 

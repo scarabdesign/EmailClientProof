@@ -6,10 +6,16 @@ using static EmailClient.ApiService.Dto;
 
 namespace EmailClient.ApiService
 {
-    public class Queue(QueueContext queueContext, MailKitResponseContext mailKitResponseContext, MessageService messageService, MailKitClientFactory mailKitFactory, ILogger<Queue> logger, IConfiguration configuration) : IDisposable
+    public class Queue(
+        QueueContext queueContext, 
+        MailKitResponseContext mailKitResponseContext, 
+        MessageService messageService, 
+        MailKitClientFactory mailKitFactory, 
+        ILogger<Queue> logger, 
+        IConfiguration configuration) : IDisposable
     {
-        private readonly int MaxAttempts = 3;
-        private readonly int LoopInSeconds = 5;
+        private readonly int MaxAttempts = int.Parse(configuration[$"MaxAttempts"] ?? "3");
+        private readonly int SecondsBetweenLoops = int.Parse(configuration[$"SecondsBetweenLoops"] ?? "5");
         private PeriodicTimer? timer;
 
         public bool QueueRunning { get; private set; } = false;
@@ -42,7 +48,7 @@ namespace EmailClient.ApiService
         {
             await Task.Yield();
             timer?.Dispose();
-            timer = new PeriodicTimer(TimeSpan.FromSeconds(LoopInSeconds));
+            timer = new PeriodicTimer(TimeSpan.FromSeconds(SecondsBetweenLoops));
             while (await timer.WaitForNextTickAsync())
             {
                 if (!QueueRunning)
@@ -151,7 +157,7 @@ namespace EmailClient.ApiService
 
         private async void MailKitFactory_OnRecipientNotAccepted(MimeMessage message, MailboxAddress mailbox, SmtpResponse response)
         {
-            logger?.LogError("OnRecipientNotAccepted called. Message: {Message}, MailboxAddress: {Nailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
+            logger?.LogError("OnRecipientNotAccepted called. Message: {Message}, MailboxAddress: {Mailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
             var attempt = await GetEmailAttemptByMessageId(message.MessageId);
             if (attempt != null)
             {
@@ -173,7 +179,7 @@ namespace EmailClient.ApiService
 
         private async void MailKitFactory_OnSenderNotAccepted(MimeMessage message, MailboxAddress mailbox, SmtpResponse response)
         {
-            logger?.LogError("OnSenderNotAccepted called. Message: {Message}, MailboxAddress: {Nailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
+            logger?.LogError("OnSenderNotAccepted called. Message: {Message}, MailboxAddress: {Mailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
             var attempt = await GetEmailAttemptByMessageId(message.MessageId);
             if (attempt != null)
             {
@@ -184,12 +190,12 @@ namespace EmailClient.ApiService
 
         private void MailKitFactory_OnRecipientAccepted(MimeMessage message, MailboxAddress mailbox, SmtpResponse response)
         {
-            //logger?.LogInformation("OnRecipientAccepted called. Message: {Message}, MailboxAddress: {Nailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
+            //logger?.LogInformation("OnRecipientAccepted called. Message: {Message}, MailboxAddress: {Mailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
         }
 
         private void MailKitFactory_OnSenderAccepted(MimeMessage message, MailboxAddress mailbox, SmtpResponse response)
         {
-            //logger?.LogInformation("OnSenderAccepted called. Message: {Message}, MailboxAddress: {Nailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
+            //logger?.LogInformation("OnSenderAccepted called. Message: {Message}, MailboxAddress: {Mailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
         }
 
         private async Task<ISmtpClient> GetEmailClient(string? username = null)
@@ -198,7 +204,7 @@ namespace EmailClient.ApiService
             ISmtpClient? client;
             if (username == null)
             {
-                logger.LogError("Email client username is null. Returning locally hosted solution");
+                logger.LogError("Email client user name is null. Returning locally hosted solution");
                 client = await mailKitFactory.GetSmtpClientAsync(logger);
                 client.MessageSent += SmtpClient_MessageSent;
                 return client;

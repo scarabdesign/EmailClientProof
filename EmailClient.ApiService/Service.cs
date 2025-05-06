@@ -1,5 +1,4 @@
-﻿
-using static EmailClient.ApiService.Dto;
+﻿using static EmailClient.ApiService.Dto;
 
 namespace EmailClient.ApiService
 {
@@ -180,7 +179,7 @@ namespace EmailClient.ApiService
         {
             try
             {
-                await emailClientData.UpdateCampaign(campaignDto.Id, campaignDto.Name, campaignDto.Subject, campaignDto.Body, campaignDto.Text, campaignDto.Sender);
+                await emailClientData.UpdateCampaign(campaignDto.Id, campaignDto.Name, campaignDto.Subject, campaignDto.Body, campaignDto.Sender);
                 await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(campaignDto.Id)));
                 await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns()));
                 return campaignDto.Id;

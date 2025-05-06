@@ -1,30 +1,37 @@
 # Email Client Proof of Concept
 
-This is a project written in ~4 days with .NET Aspire with .NET 9. Aspire is designed to be readily cloud-deployable and uses a 
-micorservice type architecture, utilizing Docker and k8 if needed. To run this project you will need:
+This is a project written in ~4 days with .NET Aspire with .NET 9. Aspire is designed to be readily 
+cloud-deployable and uses a microservice type architecture, utilizing containerization. To run this 
+project you will need:
 
 - .Net 9
 - Docker
 
 ### Notes about the project
 
-When built and launched, the project will create new docker containers for PostgreSQL and the local Mail Server implimentation. The application
-uses the MailKit library to send emails. It has a local email server that can be used to test sending emails without actually sending them. To send
-using a real SMTP server, you will need supply credentials int the `appsettings.json`. More on that below.
+When built and launched, the project will create new docker containers for PostgreSQL and the local 
+Mail Server implementation. The application uses the MailKit library to send emails. It has a local 
+email server that can be used to test sending emails without actually sending them. To send using a 
+real SMTP server, you will need supply credentials in the `appsettings.json`. More on that below.
 
-The project send POST, GET and DELETE requests from the Web service to the API service. It also uses a Signalr connection to get
-real-time updates back the the Web.
+The project sends POST, GET and DELETE requests from the Web service to the API service. It also uses
+a SignalR connection to get real-time updates back to the Web.
 
-# NOT PERSISTENT
-# FAILURE SETUP
+As it stands, the PostgreSQL database is not persistent between application restarts. I did this 
+to make for easier development and skirt the necessity of running database migrations when I made 
+changes. However, in the `appsettings.json` of the `EmailClient.AppHost` project is a section called 
+`PgPref` with a preference called `DataVolume` which when made `true` will create an external volume 
+that will persist across restarts. There are also other preferences there that will spin up separate 
+containers for the PgWeb and PgAdmin web interfaces.
 
 ## Getting Started
 
-Make sure the Docker daemon is running. Clone this repo into a new directory and open a command line prompt in that directory. Run the following command to build the project:
+Make sure the Docker daemon is running. Clone this repository into a new directory and open a command 
+line prompt in that directory. Run the following command to build the project:
 ```bash
 dotnet build
 ```
-Then cd into the EmailClient.AppHost directory and run the following command to start the project:
+Then `cd` into the EmailClient.AppHost directory and run the following command to start the project:
 ```bash
 dotnet run
 ```
@@ -32,56 +39,64 @@ When it starts, open a browser window and go to the following URL:
 ```bash
 http://localhost:5268
 ```
-I've tried to make the application as intuitive as possible, but below would be a basic workflow.
+I've tried to make the application as intuitive as possible, but below would be a basic work-flow.
 1. Click to create a new Campaign.
-    - This will create a new Email Campaign and open the Campaign editor.
+    - This will open the Campaign editor.
 2. Fill in all the required fields and click the "Save Campaign" button.
 	- This will save the Campaign and allow you to put in recipients.
-3. Type in one or more recipient email addresses seperated by comma or space. Click the "Add" button.
-	- This will add the recipients to the list of email attemps at the bottom
-    - The list will update itself to show the status of the email attemps at the bottom and will
-    update itself when it get's an update from the server.
+3. Type in one or more recipient email addresses separated by comma or space. Click the "Add" button.
+	- This will add the recipients to the list of email attempts at the bottom
+    - The list will automatically update as it gets status updates from the API.
 
-To get a glimps of what's going on under the hood, look at the running command prompt and open the link that says:
+To get a glimpse of what's going on under the hood, look at the running command prompt and open the link 
+that says:
 ```bash
 > Log into the dashboard at http://localhost:XXXX?...
 ```
 When it loads you will see a list of all the running services. To see emails sent locally, 
-click on the URL for the `maildev` service. This will open a new tab with the local mail server.
+click on the URL for the `maildev` service. This will open a new tab with the local mail server interface.
 
-## Sending to other email servers
-To set up the application to send emails to a real SMTP server, you will need to edit the `appsettings.json` 
-file in the EmailClient.ApiService directory. Under `ExternalEmailHosts` there's listed an example entry for `sampleemail@gmail.com`.
-When using email addresses listed here as the `Sender` of a campain, the application will use the the information listed here to 
-attempt to make a connection to that SMTP server.
+## Sending to other SMTP servers
+To set up the application to send emails to a real SMTP server, you will need to edit the 
+`appsettings.json` file in the `EmailClient.ApiService` directory. Under `ExternalEmailHosts` there's listed 
+an example entry for `sampleemail@gmail.com`. When using email addresses listed here as the `Sender` of a 
+campaign, the application will use the information listed here to attempt to make a connection to that SMTP 
+server.
 
-To send an email through Gmail's SMTP server, you will need to set up 2fa authentication and create an app password.
+To send an email through Gmail's SMTP server, you will need to set up 2fa authentication and create an app 
+password:
 
 1. Visit the Google Account settings.
-2. Select “Security” from the left-hand side.
-3. Under the “Signing in to Google” section, click on “2-Step Verification” and follow the prompts to enable it.
-4. After enabling two-step verification, search for “App Passwords”. You may be asked to re-enter your password.
-5. In the App passwords section, supply a name for the app and clicl on “Create”.
-6. Google will generate a new 16-character password for you. Copy and paste that into the `appsettings.json` file.
+2. Select "Security" from the left-hand side.
+3. Under the "Signing in to Google" section, click on "2-Step Verification" and follow the prompts to enable it.
+4. After enabling two-step verification, search for "App Passwords". You may be asked to re-enter your password.
+5. In the App passwords section, supply a name for the app and click on "Create".
+6. Google will generate a new 16-character password for you.
+7. Add a new section in the `appsettings.json` as the email you wish to use.
+8. Paste the App password in for `pass`.
+9. Type in `smtp.gmail.com` for `host`.
+10. Make the port `587`.
 
 ## Using Postman
 
-Included in the root of the project folder is a file called `EmailProof.postman_collection.json`. In Postman, click the `Import` 
-button and drop that file into it.
+Included in the root of the project folder is a file called `EmailProof.postman_collection.json`. In 
+Postman, click the `Import` button and drop that file into it.
 
-- Once they are imported, find the entry called `addCampaign`. Click the `Body` tab to examine the payload and make changes 
-if desired. Click `Send`. What's returned should be an `ok` response and an `id` of the newly created campaign:
+- Once they are imported, find the entry called `addCampaign`. Click the `Body` tab to examine the payload 
+and make changes if desired. Click `Send`. What's returned should be an `ok` response and an `id` of the 
+newly created campaign:
 ```JSON
 {
     "result": "ok",
     "id": 1
 }
 ```
+If the web front end page is open, you should see the new campaign automatically appear in the list.
 
 - Next, go to `getAllCampains` and click `Send`. Admire the list.
 
-- Now, go to `addAttempt` and examine the body there, making changes as you see fit. Be sure the use the `campaignId` of a valid 
-campain in the lists on the previous step. Click the `Send` button:
+- Now, go to `addAttempt` and examine the body there, making changes as you see fit. Be sure the use the 
+`campaignId` of a valid campaign in the lists on the previous step. Click the `Send` button:
 ```JSON
 {
     "email": "sampleRecipient@emailme.com",
@@ -89,7 +104,9 @@ campain in the lists on the previous step. Click the `Send` button:
 }
 ```
 
-- Open the `getAllAttempts` entry. The URL will contain an `id` property which should be a valid `campaignId`. Click `Send` to get a list of all the emails added to the campaign and the status of it's processing. For reference:
+- Open the `getAllAttempts` entry. The URL will contain an `id` property which should be a valid 
+`campaignId`. Click `Send` to get a list of all the emails added to the campaign and the status of 
+it's processing. For reference:
 ```C#
 public enum EmailStatus
 {
@@ -100,9 +117,24 @@ public enum EmailStatus
 }
 ```
 
+## Testing Failures
+
+The API will attempt to send the emails up to the default of 3 times (settable in `EmailClient.ApiService.appsettings.json` as `MaxAttempts`) and
+the failed status can be found in the Campaign editor window in the email list. 
+
+Failures are detected when:
+- The user name can't authenticate against the given server
+- The sender email is not accepted
+- The recipient email is not accepted
+
+As of this publishing, it's not possible to send with a different email address than the one used in the authentication attempt.
+I don't know how to trigger a recipient rejection at this time either, so the only testable failure would be authentication.
+To set this test up, use fake credentials in the `appsettings.json` (or just use the existing sample email `sampleemail@gmail.com`). 
+
 ## Using Command Line
 
-When the application is running, all requests can be sent with cURL requests. 
+When the application is running, all requests can be sent with cURL requests. Any request in the 
+Postman list or in the API routes can be used. Below are some examples.
 
 ### Adding a campaign
 GitCLI:
@@ -176,9 +208,24 @@ lastAttempt : 2025-05-05T14:49:51.721792-07:00
 campaignId  : 2
 ```
 
-## TODO
-
-- [ ] Move MaxAttempts to config file
-- [ ] Move TinyMCE APi key to config
-- [ ] Feedback on running queue
-- [ ] Feedback on failed
+## Possible Improvements
+### Best practices
+- [ ] Add interfaces to everything!
+- [ ] Build up the test suite
+- [ ] Add Swagger
+- [ ] Create static classes for strings used in the app
+- [ ] Enable DB migrations and make a persistent store
+### Refactoring
+- [ ] Combine socket responses to send fewer updates
+- [ ] Don't reference classes in web service directly from API service.
+- [ ] Use a different rich text editor or update TinyMCE (paid) and enable HTML editing
+### Scalability
+- [ ] Add AMQP
+- [ ] Add to K8s cluster
+- [ ] Deploy to cloud
+### Nice to haves
+- [ ] Supply names with email addresses, maybe other contact details
+- [ ] Create email bodies as templates that can be saved and use more contact details for more personalization
+- [ ] Savable email lists that can applied to campaigns
+- [ ] Exportable templates/lists
+- [ ] User feedback on running status of the queue

@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
+using static EmailClient.ApiService.Dto;
 
 namespace EmailClient.ApiService
 {
@@ -45,7 +47,7 @@ namespace EmailClient.ApiService
             await dbContext.SaveChangesAsync();
         }
 
-        public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? text, string? sender)
+        public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? sender)
         {
             var targetCampaign = dbContext.Campaigns.FirstOrDefault(c => c.Id == id);
             if (targetCampaign == null) return;
@@ -53,7 +55,7 @@ namespace EmailClient.ApiService
             targetCampaign.Subject = subject ?? targetCampaign.Subject;
             targetCampaign.Sender = sender ?? targetCampaign.Sender;
             targetCampaign.Body = body ?? targetCampaign.Body;
-            targetCampaign.Text = text ?? targetCampaign.Text;
+            targetCampaign.Text = Regex.Replace(targetCampaign.Body, "<[^>]*?>", " ").Replace("  ", " ");
             targetCampaign.Updated = DateTime.UtcNow;
             dbContext.Campaigns.Update(targetCampaign);
             await dbContext.SaveChangesAsync();
