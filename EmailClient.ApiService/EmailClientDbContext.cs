@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
 using Org.BouncyCastle.Asn1.Cmp;
 using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -49,38 +50,37 @@ namespace EmailClient.ApiService
 
     public class ContextQueue(MailKitResponseContext mailKitResponseContext, ILogger<ContextQueue> logger) : IDisposable
     {
-        private ConcurrentQueue<Func<MailKitResponseContext, Task<dynamic?>>> _queue = [];
+        private ConcurrentQueue<Tuple<Func<MailKitResponseContext, Task<dynamic?>>,TaskCompletionSource<dynamic?>>> _queue = [];
         private SemaphoreSlim _semaphore = new(1, 1);
         private bool QueueRunning;
 
-
-        public void Enqueue(Func<MailKitResponseContext, Task<dynamic?>> action)
+        public async Task<dynamic?> Enqueue(Func<MailKitResponseContext, Task<dynamic?>> action)
         {
-            _queue.Enqueue(action);
+            var source = new TaskCompletionSource<dynamic?>();
+            var t = new Tuple<Func<MailKitResponseContext, Task<dynamic?>>, TaskCompletionSource<dynamic?>>(action, source);
+            _queue.Enqueue(t);
             if (!QueueRunning)
             {
-                Dequeue();
+                RunContextQueue();
             }
+            return await source.Task;
         }
 
-        private async void Dequeue()
+        private async void RunContextQueue()
         {
             QueueRunning = true;
             while (!_queue.IsEmpty)
             {
-                var source = new TaskCompletionSource<dynamic?>();
                 await _semaphore.WaitAsync();
                 try
                 {
                     if (_queue.TryDequeue(out var action))
                     {
-                        var res = await action(mailKitResponseContext);
-                        source.SetResult(res);
+                        action.Item2.SetResult(await action.Item1(mailKitResponseContext));
                     }
                 }
                 catch (Exception ex)
                 {
-                    source.SetException(ex);
                     logger.LogError(ex, "Error while dequeuing");
                     throw;
                 }
@@ -88,10 +88,7 @@ namespace EmailClient.ApiService
                 {
                     _semaphore.Release();
                 }
-                await source.Task;
             }
-
-
             QueueRunning = false;
         }
 
@@ -99,7 +96,7 @@ namespace EmailClient.ApiService
         public void Clear() => _queue.Clear();
         public bool IsEmpty => _queue.IsEmpty;
         public void Dispose() => _semaphore.Dispose();
-        public void DisposeQueue() => _queue = new ConcurrentQueue<Func<MailKitResponseContext, Task<dynamic?>>>();
+        public void DisposeQueue() => _queue = new ConcurrentQueue<Tuple<Func<MailKitResponseContext, Task<dynamic?>>, TaskCompletionSource<dynamic?>>>();
         public void DisposeSemaphore() => _semaphore.Dispose();
         public void DisposeAll()
         {

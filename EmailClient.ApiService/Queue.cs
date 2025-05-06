@@ -8,7 +8,6 @@ namespace EmailClient.ApiService
 {
     public class Queue(
         QueueContext queueContext,
-        MailKitResponseContext mailKitResponseContext,
         ContextQueue contextQueue, 
         MessageService messageService, 
         MailKitClientFactory mailKitFactory, 
@@ -76,90 +75,26 @@ namespace EmailClient.ApiService
             }
             else
             {
-                Campaign? camp = null;
-                bool waiting = true;
-                contextQueue.Enqueue(async context =>
-                {
-                    camp = await context.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
-                    waiting = false;
-                    return camp;
-                });
-                while (waiting)
-                {
-                    await Task.Delay(100);
-                }
-                return camp;
-                //return await mailKitResponseContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
+                return await contextQueue.Enqueue(async context => await context.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId));
+
             }
         }
-            
-
-        //private async Task<List<Campaign>> GetAllCampaigns() =>
-        //    await queueContext.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync();
 
         private async Task<List<Campaign>> GetAllCampaigns()
         {
-            List<Campaign> ? list = null;
-            bool waiting = true;
-            contextQueue.Enqueue(async context =>
-            {
-                list = await context.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync();
-                waiting = false;
-                return list;
-            });
-            while (waiting)
-            {
-                await Task.Delay(100);
-            }
-            return list ?? [];
+
+            var result = await contextQueue.Enqueue(async context => await context.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().ToListAsync());
+            if (result != null)
+                return result;
+            return [];
         }
             
-
-
-        //private async Task<EmailAttempt?> GetEmailAttemptByMessageId(string? messageId)
-        //{
-        //    EmailAttempt? emailAttempts = null;
-        //    bool waiting = true;
-        //    contextQueue.Enqueue(async (context) =>
-        //    {
-        //        emailAttempts = await context.EmailAttempts.AsNoTracking()
-        //            .Include(e => e.Campaign)
-        //            .FirstOrDefaultAsync(e =>
-        //            e.MessageId == messageId);
-        //        waiting = false;
-        //    });
-        //    while (waiting)
-        //    {
-        //        await Task.Delay(100);
-        //    }
-        //    return emailAttempts;
-        //}
         private async Task<EmailAttempt?> GetEmailAttemptByMessageId(string? messageId)
         {
-            //var result = await contextQueue.ContextAction(async (context) => await context.EmailAttempts.AsNoTracking()
-            //    .Include(e => e.Campaign)
-            //    .FirstOrDefaultAsync(e =>
-            //    e.MessageId == messageId), "GetEmailAttemptByMessageId");
-            //if (result != null)
-            //    return await result;
-            //return null;
-
-            EmailAttempt? eatt = null;
-            bool waiting = true;
-            contextQueue.Enqueue(async context =>
-            {
-                eatt = await context.EmailAttempts.AsNoTracking()
+            return await contextQueue.Enqueue(async context => await context.EmailAttempts.AsNoTracking()
                     .Include(e => e.Campaign)
                     .FirstOrDefaultAsync(e =>
-                    e.MessageId == messageId);
-                waiting = false;
-                return eatt;
-            });
-            while (waiting)
-            {
-                await Task.Delay(100);
-            }
-            return eatt;
+                    e.MessageId == messageId));
 
         }
         private async Task UpdateEmailAttempt(int id, EmailStatus? status, int? attempts = null, string? messageId = null, string? result = null, int? errorCode = null)
@@ -178,9 +113,7 @@ namespace EmailClient.ApiService
 
         private async Task UpdateEmailAttemptFromResponse(int id, EmailStatus? status, int? attempts = null, string? messageId = null, string? result = null, int? errorCode = null)
         {
-
-            bool waiting = true;
-            contextQueue.Enqueue(async context =>
+            await contextQueue.Enqueue(async context =>
             {
                 var targetAttempt = context.EmailAttempts.FirstOrDefault(a => a.Id == id);
                 if (targetAttempt == null) return null;
@@ -192,39 +125,8 @@ namespace EmailClient.ApiService
                 targetAttempt.LastAttempt = DateTime.UtcNow;
                 context.EmailAttempts.Update(targetAttempt);
                 await context.SaveChangesAsync();
-                waiting = false;
                 return null;
             });
-            while (waiting)
-            {
-                await Task.Delay(100);
-            }
-
-
-            //await contextQueue.ContextAction(async (context) =>
-            //{
-            //    var targetAttempt = context.EmailAttempts.FirstOrDefault(a => a.Id == id);
-            //    if (targetAttempt == null) return;
-            //    targetAttempt.Status = status ?? targetAttempt.Status;
-            //    targetAttempt.Attempts = attempts ?? targetAttempt.Attempts;
-            //    targetAttempt.Result = result ?? targetAttempt.Result;
-            //    targetAttempt.ErrorCode = errorCode ?? targetAttempt.ErrorCode;
-            //    targetAttempt.MessageId = messageId ?? targetAttempt.MessageId;
-            //    targetAttempt.LastAttempt = DateTime.UtcNow;
-            //    context.EmailAttempts.Update(targetAttempt);
-            //    await context.SaveChangesAsync();
-            //}, "UpdateEmailAttemptFromResponse");
-
-            //var targetAttempt = mailKitResponseContext.EmailAttempts.FirstOrDefault(a => a.Id == id);
-            //if (targetAttempt == null) return;
-            //targetAttempt.Status = status ?? targetAttempt.Status;
-            //targetAttempt.Attempts = attempts ?? targetAttempt.Attempts;
-            //targetAttempt.Result = result ?? targetAttempt.Result;
-            //targetAttempt.ErrorCode = errorCode ?? targetAttempt.ErrorCode;
-            //targetAttempt.MessageId = messageId ?? targetAttempt.MessageId;
-            //targetAttempt.LastAttempt = DateTime.UtcNow;
-            //mailKitResponseContext.EmailAttempts.Update(targetAttempt);
-            //await mailKitResponseContext.SaveChangesAsync();
         }
 
         private async Task SendNotify(int campaignId, bool isQueue)
