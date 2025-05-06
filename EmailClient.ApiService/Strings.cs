@@ -34,7 +34,7 @@ namespace EmailClient.ApiService
             public const string QueueProcessingTime = "Queue processed at {Time}";
             public const string RecipientNotAccepted = "Recipient Not Accepted";
             public const string SenderNotAccepted = "Sender Not Accepted";
-            public const string EmailClientFallBack = "Email client user name is null. Returning locally hosted solution";
+            public const string EmailClientFallBack = "Email client user not present in config. Falling back to locally hosted solution";
             public const string NoMoreEmails = "No email attempts to process. Stopping queue.";
             public const string CampaignNotFound = "Campaign not found";
             public const string ConnectionProblem = "Problem creating connection: {Message}";
