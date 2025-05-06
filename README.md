@@ -17,12 +17,12 @@ real SMTP server, you will need supply credentials in the `appsettings.json`. Mo
 The project sends POST, GET and DELETE requests from the Web service to the API service. It also uses
 a SignalR connection to get real-time updates back to the Web.
 
-As it stands, the PostgreSQL database is not persistent between application restarts. I did this 
-to make for easier development and skirt the necessity of running database migrations when I made 
-changes. However, in the `appsettings.json` of the `EmailClient.AppHost` project is a section called 
-`PgPref` with a preference called `DataVolume` which when made `true` will create an external volume 
-that will persist across restarts. There are also other preferences there that will spin up separate 
-containers for the PgWeb and PgAdmin web interfaces.
+As it's configured, the PostgreSQL database is not persistent between application restarts to make 
+for easier development and skirt the necessity of running database migrations when I made changes. 
+However, in the `appsettings.json` of the `EmailClient.AppHost` project is a section called `PgPref` 
+with a preference called `DataVolume` which when made `true` will create an external volume that will 
+persist across restarts. There are also other preferences there that will spin up separate containers 
+for the `PgWeb` and `PgAdmin` web interfaces.
 
 ## Getting Started
 
@@ -208,21 +208,32 @@ lastAttempt : 2025-05-05T14:49:51.721792-07:00
 campaignId  : 2
 ```
 
-## Possible Improvements
+## Possible Future Improvements
 ### Best practices
-- [ ] Add interfaces to everything!
+- [ ] Add interfaces for everything!
 - [ ] Build up the test suite
 - [ ] Add Swagger
-- [ ] Create static classes for strings used in the app
-- [ ] Enable DB migrations and make a persistent store
+- [ ] Enable DB migrations
+- [ ] Separate models from dbContext
+- [ ] Use `record` for DTOs instead of classes
 ### Refactoring
 - [ ] Combine socket responses to send fewer updates
 - [ ] Don't reference classes in web service directly from API service.
 - [ ] Use a different rich text editor or update TinyMCE (paid) and enable HTML editing
+- [ ] Solve concurrency problems; remove duplicate dbContexts
 ### Scalability
 - [ ] Add AMQP
 - [ ] Add to K8s cluster
 - [ ] Deploy to cloud
+### Interface improvements
+- [ ] Bring more details of errors to the front-end
+- [ ] Put email status list in separate interface
+- [ ] Make navigable with breadcrumbs; remove large modal
+- [ ] Use more icons
+### Marketability
+- [ ] Give it a catchy name
+- [ ] Spice up the layout
+- [ ] Create a logo/favicon
 ### Nice to haves
 - [ ] Supply names with email addresses, maybe other contact details
 - [ ] Create email bodies as templates that can be saved and use more contact details for more personalization

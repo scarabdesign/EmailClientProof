@@ -14,8 +14,8 @@ namespace EmailClient.ApiService
         ILogger<Queue> logger, 
         IConfiguration configuration) : IDisposable
     {
-        private readonly int MaxAttempts = int.Parse(configuration[$"MaxAttempts"] ?? "3");
-        private readonly int SecondsBetweenLoops = int.Parse(configuration[$"SecondsBetweenLoops"] ?? "5");
+        private readonly int MaxAttempts = int.Parse(configuration[Strings.QueueConfig.MaxAttempts] ?? "3");
+        private readonly int SecondsBetweenLoops = int.Parse(configuration[Strings.QueueConfig.SecondsBetweenLoops] ?? "5");
         private PeriodicTimer? timer;
 
         public bool QueueRunning { get; private set; } = false;
@@ -24,24 +24,24 @@ namespace EmailClient.ApiService
         {
             if (QueueRunning)
             {
-                logger.LogInformation("Queue is already running.");
+                logger.LogInformation(Strings.QueueLogInfo.QueueRunning);
                 return;
             }
             _ = RunQueue();
             QueueRunning = true;
-            logger.LogInformation("Queue started.");
+            logger.LogInformation(Strings.QueueLogInfo.QueueStarted);
         }
 
         public void StopQueue()
         {
             if (!QueueRunning)
             {
-                logger.LogInformation("Queue is not running.");
+                logger.LogInformation(Strings.QueueLogInfo.QueueNotRunning);
                 return;
             }
             timer?.Dispose();
             QueueRunning = false;
-            logger.LogInformation("Queue stopped.");
+            logger.LogInformation(Strings.QueueLogInfo.QueueStopped);
         }
 
         private async Task RunQueue()
@@ -56,7 +56,7 @@ namespace EmailClient.ApiService
                     return;
                 }
                 await ProcessQueue();
-                logger.LogInformation("Queue processed at {Time}", DateTime.Now);
+                logger.LogInformation(Strings.QueueLogInfo.QueueProcessingTime, DateTime.Now);
             }
         }
 
@@ -146,44 +146,40 @@ namespace EmailClient.ApiService
 
         private async void SmtpClient_MessageSent(object? sender, MailKit.MessageSentEventArgs e)
         {
-            logger?.LogInformation("MessageSent called. sender: {sender}, message: {message}, response: {response}", sender?.GetType(), e.Message, e.Response);
             var attempt = await GetEmailAttemptByMessageId(e.Message.MessageId);
             if (attempt != null)
             {
-                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Sent);
+                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Sent, attempt.Attempts, attempt.MessageId, e.Response);
                 await SendNotify(attempt.CampaignId, false);
             }
         }
 
         private async void MailKitFactory_OnRecipientNotAccepted(MimeMessage message, MailboxAddress mailbox, SmtpResponse response)
         {
-            logger?.LogError("OnRecipientNotAccepted called. Message: {Message}, MailboxAddress: {Mailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
             var attempt = await GetEmailAttemptByMessageId(message.MessageId);
             if (attempt != null)
             {
-                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Failed, attempt.Attempts, message.MessageId, "Recipient Not Accepted", 550);
+                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Failed, attempt.Attempts, attempt.MessageId, Strings.QueueLogInfo.RecipientNotAccepted, 550);
                 await SendNotify(attempt.CampaignId, false);
             }
         }
 
         private async void MailKitFactory_OnNoRecipientsAccepted(MimeMessage message)
         {
-            logger?.LogError("OnNoRecipientsAccepted called. Message: {Message}", message.ToString());
             var attempt = await GetEmailAttemptByMessageId(message.MessageId);
             if (attempt != null)
             {
-                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Failed, attempt.Attempts, message.MessageId, "Recipient Not Accepted", 550);
+                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Failed, attempt.Attempts, message.MessageId, Strings.QueueLogInfo.RecipientNotAccepted, 550);
                 await SendNotify(attempt.CampaignId, false);
             }
         }
 
         private async void MailKitFactory_OnSenderNotAccepted(MimeMessage message, MailboxAddress mailbox, SmtpResponse response)
         {
-            logger?.LogError("OnSenderNotAccepted called. Message: {Message}, MailboxAddress: {Mailbox}, SmtpResponse: {Response}", message.ToString(), mailbox.Address, response.StatusCode);
             var attempt = await GetEmailAttemptByMessageId(message.MessageId);
             if (attempt != null)
             {
-                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Failed, attempt.Attempts, message.MessageId, "Sender Not Accepted", 550);
+                await UpdateEmailAttemptFromResponse(attempt.Id, EmailStatus.Failed, attempt.Attempts, message.MessageId, Strings.QueueLogInfo.SenderNotAccepted, 550);
                 await SendNotify(attempt.CampaignId, false);
             }
         }
@@ -204,7 +200,7 @@ namespace EmailClient.ApiService
             ISmtpClient? client;
             if (username == null)
             {
-                logger.LogError("Email client user name is null. Returning locally hosted solution");
+                logger.LogError(Strings.QueueLogInfo.EmailClientFallBack);
                 client = await mailKitFactory.GetSmtpClientAsync(logger);
                 client.MessageSent += SmtpClient_MessageSent;
                 return client;
@@ -215,7 +211,7 @@ namespace EmailClient.ApiService
             var password = configuration[$"ExternalEmailHosts:{username}:pass"];
             if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(password))
             {
-                logger.LogError("Email client configuration is missing. Returning locally hosted solution");
+                logger.LogError(Strings.QueueLogInfo.EmailClientFallBack);
                 client = await mailKitFactory.GetSmtpClientAsync(logger);
             }
             else
@@ -246,7 +242,7 @@ namespace EmailClient.ApiService
                 var emailAttempts = await GetUnsentEmailAttempts();
                 if (emailAttempts == null || emailAttempts.Count == 0)
                 {
-                    logger.LogInformation("No email attempts to process.");
+                    logger.LogInformation(Strings.QueueLogInfo.NoMoreEmails);
                     StopQueue();
                     return;
                 }
@@ -268,7 +264,7 @@ namespace EmailClient.ApiService
                             status: EmailStatus.Failed,
                             attempts: ++attempt.Attempts,
                             messageId: attempt.MessageId,
-                            result: "Campaign not found",
+                            result: Strings.QueueLogInfo.CampaignNotFound,
                             errorCode: 404
                         );
 
@@ -286,7 +282,7 @@ namespace EmailClient.ApiService
                         }
                         catch(Exception e)
                         {
-                            logger.LogError(e, "Problem creating connection: {Message}", e.Message);
+                            logger.LogError(e, Strings.QueueLogInfo.ConnectionProblem, e.Message);
                             await UpdateEmailAttempt(
                                 attempt.Id,
                                 status: EmailStatus.Failed,
@@ -303,7 +299,7 @@ namespace EmailClient.ApiService
 
                     if (smtpClient == null)
                     {
-                        logger.LogError("SMTP client is null. Skipping email attempt: {Email}", attempt.Email);
+                        logger.LogError(Strings.QueueLogInfo.ClientIsNull, attempt.Email);
                         continue;
                     }
 
@@ -328,7 +324,7 @@ namespace EmailClient.ApiService
                     }
                     catch (Exception e)
                     {
-                        logger.LogError(e, "Failed to send email to {Email}: {ErrorMessage}", attempt.Email, e.Message);
+                        logger.LogError(e, Strings.QueueLogInfo.SendingFailed, attempt.Email, e.Message);
                         await UpdateEmailAttempt(
                             attempt.Id,
                             status: EmailStatus.Failed,
@@ -344,7 +340,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while running the queue: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.QueueLogInfo.QueueFailureError, ex.Message);
             }
         }
 

@@ -66,14 +66,14 @@ namespace EmailClient.ApiService
         public class CampaignDto
         {
             public int Id { get; set; }
-            [Required(AllowEmptyStrings = false, ErrorMessage = "Campaign title is required.")]
+            [Required(AllowEmptyStrings = false, ErrorMessage = Strings.CampaignValidation.CampaignNameError)]
             public required string Name { get; set; }
-            [Required(AllowEmptyStrings = false, ErrorMessage = "Campaign Email subject is required.")]
+            [Required(AllowEmptyStrings = false, ErrorMessage = Strings.CampaignValidation.CampaignSubjectError)]
             public required string Subject { get; set; }
-            [Required(AllowEmptyStrings = false, ErrorMessage = "Campaign Sender Enmail is required.")]
-            [EmailAddress(ErrorMessage = "Invalid Sender email format.")]
+            [Required(AllowEmptyStrings = false, ErrorMessage = Strings.CampaignValidation.CampaignSenderError)]
+            [EmailAddress(ErrorMessage = Strings.CampaignValidation.CampaignInvalidEmailError)]
             public required string Sender { get; set; }
-            [Required(AllowEmptyStrings = false, ErrorMessage = "Campaign Email body is required.")]
+            [Required(AllowEmptyStrings = false, ErrorMessage = Strings.CampaignValidation.CampaignBodyError)]
             public required string Body { get; set; }
             public string? Text { get; set; }
             public DateTime Created { get; set; } = DateTime.Now;

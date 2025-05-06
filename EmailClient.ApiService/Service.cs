@@ -22,7 +22,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving emailAttempt attempts: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.ServiceLogs.GetAllEmailAttemptsFailed, ex.Message);
             }
 
             return null;
@@ -45,12 +45,12 @@ namespace EmailClient.ApiService
                 }
                 else
                 {
-                    logger.LogInformation("Campain with id: {CampaignId} does not exist", emailAttempt.CampaignId);
+                    logger.LogInformation(Strings.ServiceLogs.CampaignDoesNotExist, emailAttempt.CampaignId);
                 }
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving emailAttempt attempts: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.ServiceLogs.AddEmailAttemptFailed, ex.Message);
             }
 
             return (null, null);
@@ -63,12 +63,6 @@ namespace EmailClient.ApiService
                 var campaignId = 0;
                 foreach (var emailAttempt in emails)
                 {
-                    if (!await emailClientData.CampaignExists(emailAttempt.CampaignId))
-                    {
-                        logger.LogError("Campain with id: {campaignId} does not exist", emailAttempt.CampaignId);
-                        continue;
-                    }
-
                     campaignId = emailAttempt.CampaignId;
                     if (await emailClientData.CampaignExists(emailAttempt.CampaignId))
                     {
@@ -80,7 +74,7 @@ namespace EmailClient.ApiService
                     }
                     else
                     {
-                        logger.LogInformation("Campain with id: {CampaignId} does not exist", emailAttempt.CampaignId);
+                        logger.LogInformation(Strings.ServiceLogs.CampaignDoesNotExist, emailAttempt.CampaignId);
                     }
                 }
                 await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(campaignId)));
@@ -89,7 +83,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving emailAttempt attempts: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.ServiceLogs.AddEmailAttemptFailed, ex.Message);
             }
 
             return null;
@@ -103,7 +97,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving emailAttempt attempts: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.ServiceLogs.RemoveEmailAttemptFailed, ex.Message);
             }
 
             return null;
@@ -117,7 +111,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving campaigns: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.ServiceLogs.GetAllCampaignsFailed, ex.Message);
             }
             return null;
         }
@@ -130,7 +124,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving campaigns: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.ServiceLogs.GetCampaignFailed, ex.Message);
             }
             return null;
         }
@@ -155,7 +149,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while retrieving campaigns: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.ServiceLogs.AddCampaignFailed, ex.Message);
             }
             return null;
         }
@@ -170,7 +164,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while removing campaign: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.ServiceLogs.RemoveCampaignFailed, ex.Message);
             }
             return null;
         }
@@ -186,7 +180,7 @@ namespace EmailClient.ApiService
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while updating campaign: {ErrorMessage}", ex.Message);
+                logger.LogError(ex, Strings.ServiceLogs.UpdateCampaignFailed, ex.Message);
             }
             return null;
         }

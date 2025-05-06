@@ -24,7 +24,7 @@ public class MessageService(IHubContext<MessageHub> hubContext)
             payloadObj.CurrentlyViewing = campaign;
         }
         var payload = JsonSerializer.Serialize(payloadObj, jOpts);
-        await hubContext.Clients.All.SendAsync("CampaignUpdated", payload);
+        await hubContext.Clients.All.SendAsync(Strings.SocketSubscriptions.CampaignUpdated, payload);
     }
 
     public async Task CampaignsUpdated(List<CampaignDto> campaigns)
@@ -34,6 +34,6 @@ public class MessageService(IHubContext<MessageHub> hubContext)
             Campaigns = campaigns,
             Updated = DateTime.Now
         }, jOpts);
-        await hubContext.Clients.All.SendAsync("CampaignsUpdated", payload);
+        await hubContext.Clients.All.SendAsync(Strings.SocketSubscriptions.CampaignsUpdated, payload);
     }
 }

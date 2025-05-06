@@ -6,70 +6,43 @@ namespace EmailClient.ApiService
     {
         public static void MapEndPoints(WebApplication app)
         {
+            var routeStart = "/";
             var service = app.Services.CreateScope().ServiceProvider.GetRequiredService<Service>();
-            
-            app.MapGet("/startQueue", service.StartQueue).WithName("startQueue");
-            app.MapGet("/stopQueue", service.StopQueue).WithName("stopQueue");
-
-            app.MapGet("/getAllAttempts", async (int id) =>
-            {
-                return await service.GetAllEmailAttempts(id);
-            })
-            .WithName("getAllAttempts");
-
-            app.MapPost("/addAttempt", async (EmailAttemptDto emailAttempt) =>
+            app.MapGet(routeStart + Strings.RouteNames.StartQueue, service.StartQueue).WithName(Strings.RouteNames.StartQueue);
+            app.MapGet(routeStart + Strings.RouteNames.StopQueue, service.StopQueue).WithName(Strings.RouteNames.StopQueue);
+            app.MapGet(routeStart + Strings.RouteNames.GetAllAttempts, async (int id) => await service.GetAllEmailAttempts(id)).WithName(Strings.RouteNames.GetAllAttempts);
+            app.MapPost(routeStart + Strings.RouteNames.AddAttempt, async (EmailAttemptDto emailAttempt) =>
             {
                 var (email, campaignId) = await service.AddEmailAttempt(emailAttempt);
-                return email != null ? Results.Ok(new { result = "ok", email, campaignId }) : Results.Problem("Adding attempt failed");
-            })
-            .WithName("addAttempt");
-
-            app.MapPost("/addAttempts", async (List<EmailAttemptDto> emails) =>
+                return email != null ? Results.Ok(new { result = Strings.RouteResponses.Ok, email, campaignId }) : Results.Problem(Strings.RouteResponses.AddingAttemptFailed);
+            }).WithName(Strings.RouteNames.AddAttempt);
+            app.MapPost(routeStart + Strings.RouteNames.AddAttempts, async (List<EmailAttemptDto> emails) =>
             {
                 var processed = await service.AddEmailAttempts(emails);
-                return processed != null ? Results.Ok(new { result = "ok", emails = processed}) : Results.Problem("Adding attempts failed");
-            })
-            .WithName("addAttempts");
-
-            app.MapDelete("/removeAttempt", async (int id) =>
+                return processed != null ? Results.Ok(new { result = Strings.RouteResponses.Ok, emails = processed}) : Results.Problem(Strings.RouteResponses.AddingAttemptsFailed);
+            }).WithName(Strings.RouteNames.AddAttempts);
+            app.MapDelete(routeStart + Strings.RouteNames.RemoveAttempt, async (int id) =>
             {
                 var email = await service.RemoveEmailAttempt(id);
-                return email != null ? Results.Ok(new { result = "ok", email }) : Results.Problem("Removing attempt failed");
-            })
-            .WithName("removeAttempt");
-
-            app.MapGet("/getAllCampaigns", async () =>
-            {
-                return await service.GetAllCampaigns();
-            })
-            .WithName("getAllCampaigns");
-
-            app.MapGet("/getCampaign", async (int id) =>
-            {
-                return await service.GetCampaign(id);
-            })
-            .WithName("getCampaign");
-
-            app.MapPost("/addCampaign", async (CampaignDto campaign) =>
+                return email != null ? Results.Ok(new { result = Strings.RouteResponses.Ok, email }) : Results.Problem(Strings.RouteResponses.RemovingAttemptFailed);
+            }).WithName(Strings.RouteNames.RemoveAttempt);
+            app.MapGet(routeStart + Strings.RouteNames.GetAllCampaigns, async () => await service.GetAllCampaigns()).WithName(Strings.RouteNames.GetAllCampaigns);
+            app.MapGet(routeStart + Strings.RouteNames.GetCampaign, async (int id) => await service.GetCampaign(id)).WithName(Strings.RouteNames.GetCampaign);
+            app.MapPost(routeStart + Strings.RouteNames.AddCampaign, async (CampaignDto campaign) =>
             {
                 var id = await service.AddCampaign(campaign);
-                return id != null ? Results.Ok(new { result = "ok", id }) : Results.Problem("Adding campaign failed");
-            })
-            .WithName("addCampaign");
-
-            app.MapDelete("/removeCampaign", async (int id) =>
+                return id != null ? Results.Ok(new { result = Strings.RouteResponses.Ok, id }) : Results.Problem(Strings.RouteResponses.AddingCampaignFailed);
+            }).WithName(Strings.RouteNames.AddCampaign);
+            app.MapDelete(routeStart + Strings.RouteNames.RemoveCampaign, async (int id) =>
             {
                 await service.RemoveCampaign(id);
-                return Results.Ok(new { result = "ok" });
-            })
-            .WithName("removeCampaign");
-
-            app.MapPost("/updateCampaign", async (CampaignDto campaign) =>
+                return Results.Ok(new { result = Strings.RouteResponses.Ok });
+            }).WithName(Strings.RouteNames.RemoveCampaign);
+            app.MapPost(routeStart + Strings.RouteNames.UpdateCampaign, async (CampaignDto campaign) =>
             {
                 var returnId = await service.UpdateCampaign(campaign);
-                return returnId != null ? Results.Ok(new { result = "ok", returnId }) : Results.Problem("Updating campaign failed");
-            })
-            .WithName("updateCampaign");
+                return returnId != null ? Results.Ok(new { result = Strings.RouteResponses.Ok, returnId }) : Results.Problem(Strings.RouteResponses.UpdatingCampaignFailed);
+            }).WithName(Strings.RouteNames.UpdateCampaign);
         }
     }
 }
