@@ -231,7 +231,7 @@ For example, to send an email using Gmail's SMTP server:
 ./EmailClient.Mailing.exe "myAddress@gmail.com" "XXXX XXXX XXXX" "smtp.gmail.com" 587 "toAddress@gmail.com" "This is the subject" "This is the body"
 ```
 
-Running this command will send the email and exit. To see the command line output, you can run the command without any arguments.
+Running this command will send the email and exit. To see the command line options, you can run the command without any arguments.
 
 
 ## Possible Future Improvements
