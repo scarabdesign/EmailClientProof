@@ -81,6 +81,20 @@ password:
 10. Make the port `587`.
 11. Restart and test the application. Note: Email will most certainly go to the Spam folder
 
+## Testing Failures
+
+The API will attempt to send the emails up to the default of 3 times (settable in `EmailClient.ApiService.appsettings.json` as `MaxAttempts`) and
+the failed status can be found in the Campaign editor window in the email list. 
+
+Failures are detected when:
+- The user name can't authenticate against the given server
+- The sender email is not accepted
+- The recipient email is not accepted
+
+As of this publishing, it's not possible to send with a different email address than the one used in the authentication attempt.
+I don't know how to trigger a recipient rejection at this time either, so the only testable failure would be authentication.
+To set this test up, use fake credentials in the `appsettings.json` (or just use the existing sample email `sampleemail@gmail.com`). 
+
 ## Using Postman
 
 Included in the root of the project folder is a file called `EmailProof.postman_collection.json`. In 
@@ -123,20 +137,6 @@ public enum EmailStatus
     Failed = 3,
 }
 ```
-
-## Testing Failures
-
-The API will attempt to send the emails up to the default of 3 times (settable in `EmailClient.ApiService.appsettings.json` as `MaxAttempts`) and
-the failed status can be found in the Campaign editor window in the email list. 
-
-Failures are detected when:
-- The user name can't authenticate against the given server
-- The sender email is not accepted
-- The recipient email is not accepted
-
-As of this publishing, it's not possible to send with a different email address than the one used in the authentication attempt.
-I don't know how to trigger a recipient rejection at this time either, so the only testable failure would be authentication.
-To set this test up, use fake credentials in the `appsettings.json` (or just use the existing sample email `sampleemail@gmail.com`). 
 
 ## Using Command Line
 
