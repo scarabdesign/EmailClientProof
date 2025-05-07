@@ -173,10 +173,36 @@ namespace EmailClient.ApiService
         {
             try
             {
-                await emailClientData.UpdateCampaign(campaignDto.Id, campaignDto.Name, campaignDto.Subject, campaignDto.Body, campaignDto.Sender);
+                await emailClientData.UpdateCampaign(campaignDto.Id, campaignDto.Name, campaignDto.Subject, campaignDto.Body, campaignDto.Sender, campaignDto.State);
                 await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(campaignDto.Id)));
                 await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns() ?? []));
                 return campaignDto.Id;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, Strings.ServiceLogs.UpdateCampaignFailed, ex.Message);
+            }
+            return null;
+        }
+
+        public async Task<int?> ToggleCampaignPause(int id)
+        {
+            try
+            {
+                var campaign = await emailClientData.GetCampaign(id);
+                if (campaign != null)
+                {
+                    campaign.State = campaign.State == CampaignState.Paused ? CampaignState.Running : CampaignState.Paused;
+                    await emailClientData.UpdateCampaign(campaign.Id, campaign.Name, campaign.Subject, campaign.Body, campaign.Sender, campaign.State);
+                    if (campaign.State == CampaignState.Running)
+                    {
+                        await emailClientData.UnpauseAttampts(campaign.Id);
+                        StartQueue();
+                    }
+                    await messageService.CampaignUpdated(CampaignDto.ToDto(campaign));
+                    await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns() ?? []));
+                    return id;
+                }
             }
             catch (Exception ex)
             {

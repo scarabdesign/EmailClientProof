@@ -76,6 +76,7 @@ namespace EmailClient.ApiService
             [Required(AllowEmptyStrings = false, ErrorMessage = Strings.CampaignValidation.CampaignBodyError)]
             public required string Body { get; set; }
             public string? Text { get; set; }
+            public CampaignState State { get; set; } = CampaignState.Running;
             public DateTime Created { get; set; } = DateTime.Now;
             public DateTime Updated { get; set; } = DateTime.Now;
             public int EmailCount { get; set; } = 0;
@@ -91,6 +92,7 @@ namespace EmailClient.ApiService
                     Sender = campaign.Sender,
                     Body = campaign.Body,
                     Text = campaign.Text,
+                    State = campaign.State,
                     Created = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(campaign.Created, DateTimeKind.Utc), TimeZoneInfo.Local),
                     Updated = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(campaign.Updated, DateTimeKind.Utc), TimeZoneInfo.Local),
                     EmailCount = campaign.EmailAttempts.Count,
@@ -115,6 +117,7 @@ namespace EmailClient.ApiService
                     Sender = campaignDto.Sender,
                     Body = campaignDto.Body,
                     Text = campaignDto.Text ?? Regex.Replace(campaignDto.Body, "<[^>]*?>", " ").Replace("  ", " "),
+                    State = campaignDto.State,
                     Created = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(campaignDto.Created, DateTimeKind.Local), TimeZoneInfo.Local),
                     Updated = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(campaignDto.Updated, DateTimeKind.Local), TimeZoneInfo.Local),
                 };

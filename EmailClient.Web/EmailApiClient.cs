@@ -110,6 +110,16 @@ public class EmailApiClient(HttpClient httpClient)
         return null;
     }
 
+    public async Task<bool> ToggleCampaignPause(int id, CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.GetAsync($"/toggleCampaignPause?id={id}", cancellationToken);
+        if (response.IsSuccessStatusCode)
+        {
+            return true;
+        }
+        return false;
+    }
+
     private class AddAttemptsResponse
     {
         public string? Result { get; set; }

@@ -57,6 +57,7 @@ namespace EmailClient.ApiService
             public const string AddCampaign = "addCampaign";
             public const string RemoveCampaign = "removeCampaign";
             public const string UpdateCampaign = "updateCampaign";
+            public const string ToggleCampaignPause = "toggleCampaignPause";
         }
 
         public static class RouteResponses

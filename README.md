@@ -48,6 +48,9 @@ I've tried to make the application as intuitive as possible, but below would be 
 	- This will add the recipients to the list of email attempts at the bottom
     - The list will automatically update as it gets status updates from the API.
 
+Campaigns are running by default. New email addresses put into the campaign will immediately start processing
+unless the `Pause` button is toggled. 
+
 To get a glimpse of what's going on under the hood, look at the running command prompt and open the link 
 that says:
 ```bash
@@ -233,6 +236,7 @@ campaignId  : 2
 - [ ] Put email status list in separate interface
 - [ ] Make navigable with breadcrumbs; remove large modal
 - [ ] Make tables searchable and filterable
+- [ ] Allow mass changing of list items (delete, pause, reset)
 - [ ] Use more icons
 ### Marketability
 - [ ] Give it a catchy name

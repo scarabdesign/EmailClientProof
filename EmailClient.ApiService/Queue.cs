@@ -259,6 +259,17 @@ namespace EmailClient.ApiService
                         continue;
                     }
 
+                    if (attempt.Campaign.State == CampaignState.Paused)
+                    {
+                        await UpdateEmailAttempt(
+                            attempt.Id,
+                            status: EmailStatus.Paused
+                        );
+
+                        await SendNotify(attempt.CampaignId);
+                        continue;
+                    }
+
                     if (attempt.CampaignId != currentCampaignId || smtpClient == null)
                     {
                         currentCampaignId = attempt.CampaignId;

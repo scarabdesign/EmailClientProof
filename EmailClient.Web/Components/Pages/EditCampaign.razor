@@ -55,8 +55,13 @@ else
             <div class="row">
                 <div class="col-md-2 text-end">Campaign ID:</div>
                 <div class="col-md-2">@(CurrentCampaign.Id > 0 ? CurrentCampaign.Id : "New")</div>
-                <div class="col-md-8 text-right">
+                <div class="col-md-6 text-right">
                     <Button @onclick=@HandleOnValidSubmit Color="ButtonColor.Success" Class="float-end me-2">Save Campaign</Button>
+                </div>
+                <div class="col-md-2">
+                    <Button @onclick=@ToggleCampaignPause Color="@(CurrentCampaign.State == CampaignState.Running ? ButtonColor.Warning : ButtonColor.Success)" Class="me-2">
+                        <Icon Name="@(CurrentCampaign.State == CampaignState.Running ? IconName.Pause : IconName.Play)" />@(CurrentCampaign.State == CampaignState.Running ? "Pause" : "Run")
+                    </Button>
                 </div>
             </div>
         </div>
@@ -272,6 +277,11 @@ else
 
         ShowWarning("Problem with fields", "Some fields are missing values. Please return and fill in all required fields");
         return false;
+    }
+
+    private async void ToggleCampaignPause()
+    {
+        await EmailApi.ToggleCampaignPause(CurrentCampaignId);
     }
 
     private bool ValidateForm()

@@ -22,7 +22,7 @@ namespace EmailClient.ApiService
     public class ContextQueue(EmailClientDbContext mailKitResponseContext, ILogger<ContextQueue> logger) : IDisposable
     {
         private ConcurrentQueue<Tuple<Func<EmailClientDbContext, Task<dynamic?>>, TaskCompletionSource<dynamic?>>> _queue = [];
-        private SemaphoreSlim _semaphore = new(1, 1);
+        private readonly SemaphoreSlim seph = new(1, 1);
         private bool QueueRunning;
 
         public async Task<dynamic?> Query(Func<EmailClientDbContext, Task<dynamic?>> action)
@@ -42,7 +42,7 @@ namespace EmailClient.ApiService
             QueueRunning = true;
             while (!_queue.IsEmpty)
             {
-                await _semaphore.WaitAsync();
+                await seph.WaitAsync();
                 try
                 {
                     if (_queue.TryDequeue(out var action))
@@ -57,24 +57,19 @@ namespace EmailClient.ApiService
                 }
                 finally
                 {
-                    _semaphore.Release();
+                    seph.Release();
                 }
             }
             QueueRunning = false;
         }
-
-        public int Count => _queue.Count;
-        public void Clear() => _queue.Clear();
-        public bool IsEmpty => _queue.IsEmpty;
-        public void Dispose() => _semaphore.Dispose();
         public void DisposeQueue() => _queue = new ConcurrentQueue<Tuple<Func<EmailClientDbContext, Task<dynamic?>>, TaskCompletionSource<dynamic?>>>();
-        public void DisposeSemaphore() => _semaphore.Dispose();
-        public void DisposeAll()
+        public void DisposeSemaphore() => seph.Dispose();
+        public void Dispose()
         {
             DisposeQueue();
             DisposeSemaphore();
+            GC.SuppressFinalize(this);
         }
-
     }
 
     [PrimaryKey(nameof(Id))]
@@ -104,14 +99,22 @@ namespace EmailClient.ApiService
         public required string Sender { get; set; }
         public required string Body { get; set; }
         public required string? Text { get; set; }
+        public CampaignState State { get; set; } = CampaignState.Running;
         public DateTime Created { get; set; } = DateTime.UtcNow;
         public DateTime Updated { get; set; } = DateTime.UtcNow;
-        public List<EmailAttempt> EmailAttempts { get; set; } = new List<EmailAttempt>();
+        public List<EmailAttempt> EmailAttempts { get; set; } = [];
+    }
+
+    public enum CampaignState
+    {
+        Running,
+        Paused,
     }
 
     public enum EmailStatus
     {
         Unsent,
+        Paused,
         InProgress,
         Sent,
         Failed,

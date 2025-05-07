@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace EmailClient.ApiService
 {
@@ -60,7 +61,26 @@ namespace EmailClient.ApiService
             });
         }
 
-        public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? sender)
+        public async Task UnpauseAttampts(int id)
+        {
+            await contextQueue.Query(async db =>
+            {
+                var targetCampaign = db.Campaigns.Include(c => c.EmailAttempts).FirstOrDefault(c => c.Id == id);
+                if (targetCampaign == null) return null;
+                targetCampaign.EmailAttempts.Where(e => e.Status == EmailStatus.Paused).ToList().ForEach(e =>
+                {
+                    e.Attempts = 0;
+                    e.Result = default;
+                    e.ErrorCode = default;
+                    e.Status = EmailStatus.Unsent;
+                    e.MessageId = default;
+                });
+                await db.SaveChangesAsync();
+                return null;
+            });
+        }
+
+        public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? sender, CampaignState? state)
         {
             await contextQueue.Query(async db =>
             {
@@ -71,6 +91,7 @@ namespace EmailClient.ApiService
                 targetCampaign.Sender = sender ?? targetCampaign.Sender;
                 targetCampaign.Body = body ?? targetCampaign.Body;
                 targetCampaign.Text = Regex.Replace(targetCampaign.Body, "<[^>]*?>", " ").Replace("  ", " ");
+                targetCampaign.State = state ?? targetCampaign.State;
                 targetCampaign.Updated = DateTime.UtcNow;
                 db.Campaigns.Update(targetCampaign);
                 await db.SaveChangesAsync();
