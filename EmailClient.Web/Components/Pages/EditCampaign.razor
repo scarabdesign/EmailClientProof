@@ -369,7 +369,7 @@ else
             }
         }
 
-        char[] delimiterChars = [' ', ','];
+        char[] delimiterChars = [' ', ',', '\r', '\n'];
         var trimmedRecipients = newRecipients.Split(delimiterChars).Select(r => r.Trim()).Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
         var valid = new List<string>();
         var invalid = new List<string>();

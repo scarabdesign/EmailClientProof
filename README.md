@@ -44,7 +44,7 @@ I've tried to make the application as intuitive as possible, but below would be 
     - This will open the Campaign editor modal.
 2. Fill in all the required fields and click the "Save Campaign" button.
 	- This will save the Campaign and allow you to put in recipients.
-3. Type in one or more recipient email addresses separated by comma or space. Click the "Add" button.
+3. Type in one or more recipient email addresses separated by comma, space or new line. Click the "Add" button.
 	- This will add the recipients to the list of email attempts at the bottom
     - The list will automatically update as it gets status updates from the API.
 
