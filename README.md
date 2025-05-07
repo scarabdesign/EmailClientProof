@@ -132,9 +132,10 @@ it's processing. For reference:
 public enum EmailStatus
 {
     Unsent = 0,
-    InProgress = 1,
-    Sent = 2,
-    Failed = 3,
+    Paused = 1,
+    InProgress = 2,
+    Sent = 3,
+    Failed = 4,
 }
 ```
 
