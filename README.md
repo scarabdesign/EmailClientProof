@@ -215,6 +215,25 @@ lastAttempt : 2025-05-05T14:49:51.721792-07:00
 campaignId  : 2
 ```
 
+### Using Command Line without running the app
+
+If you just want to use the mail client to send an email without the app running, you can run the mailing executable with all the required parameters. 
+This will require you to authenticate against the SMTP server you are using 
+(Gmail, for example), as the local mail host won't be running.
+
+CD to the directory `EmailClient.Emailing` and run the following command:
+
+```bash
+./EmailClient.Mailing.exe [from/username] [password] [host] [port] [to] [subject] [body]
+```
+For example, to send an email using Gmail's SMTP server:
+```bash
+./EmailClient.Mailing.exe "myAddress@gmail.com" "XXXX XXXX XXXX" "smtp.gmail.com" 587 "toAddress@gmail.com" "This is the subject" "This is the body"
+```
+
+Running this command will send the email and exit. To see the command line output, you can run the command without any arguments.
+
+
 ## Possible Future Improvements
 ### Best practices
 - [ ] Add interfaces for everything!
