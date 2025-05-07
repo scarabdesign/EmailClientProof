@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 
 namespace EmailClient.ApiService
 {

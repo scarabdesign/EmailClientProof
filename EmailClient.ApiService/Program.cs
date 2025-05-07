@@ -1,4 +1,5 @@
 using EmailClient.ApiService;
+using EmailClient.Mailing;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,10 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 builder.AddNpgsqlDbContext<EmailClientDbContext>("emaildb", c => c.DisableTracing = true);
-
-builder.Logging.AddConsole();
-
 builder.AddMailKitClient("maildev");
+builder.Logging.AddConsole();
 
 builder.Services.AddCors(c =>
 {
@@ -24,6 +23,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddSignalR();
 builder.Services.AddScoped<EmailClientData>();
+builder.Services.AddScoped<IMailer, Mailer>();
 builder.Services.AddScoped<Service>();
 builder.Services.AddScoped<Queue>();
 builder.Services.AddSingleton<MessageService>();

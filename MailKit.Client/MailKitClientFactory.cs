@@ -27,10 +27,10 @@ public sealed class MailKitClientFactory(MailKitClientSettings settings) : IDisp
     /// the <see cref="ISmtpClient"/> returned is intended to be used for the duration of a request
     /// (registered as 'Scoped') and is automatically disposed of.
     /// </remarks>
-    public async Task<ISmtpClient> GetSmtpClientAsync(
+    public async Task<ProofClient> GetSmtpClientAsync(
         CancellationToken cancellationToken = default)
     {
-        var client = new SmtpClient();
+        var client = new ProofClient();
         try
         {
             if (settings.Endpoint is not null)
@@ -48,7 +48,7 @@ public sealed class MailKitClientFactory(MailKitClientSettings settings) : IDisp
         }
     }
 
-    public async Task<ISmtpClient> GetCustomClientAsync(
+    public async Task<ProofClient> GetCustomClientAsync(
         string endpoint,
         int port = 587,
         bool useSsl = true,
@@ -57,7 +57,7 @@ public sealed class MailKitClientFactory(MailKitClientSettings settings) : IDisp
         CancellationToken cancellationToken = default
     )
     {
-        var client = new SmtpClient();
+        var client = new ProofClient();
         try
         {
             await client.ConnectAsync(
