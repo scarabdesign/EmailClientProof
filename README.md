@@ -221,7 +221,7 @@ If you just want to use the mail client to send an email without the app running
 This will require you to authenticate against the SMTP server you are using 
 (Gmail, for example), as the local mail host won't be running.
 
-CD to the directory `EmailClient.Emailing` and run the following command:
+CD to the directory `EmailClient.Emailing/bin/Debug/net9.0` and run the following command:
 
 ```bash
 ./EmailClient.Mailing.exe [from/username] [password] [host] [port] [to] [subject] [body]
