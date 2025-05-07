@@ -221,14 +221,24 @@ If you just want to use the mail client to send an email without the app running
 This will require you to authenticate against the SMTP server you are using 
 (Gmail, for example), as the local mail host won't be running.
 
-CD to the directory `EmailClient.Emailing/bin/Debug/net9.0` and run the following command:
-
+Linux Terminal:\
+CD to the directory `EmailClient.Emailing` and run the following command:
 ```bash
+dotnet run [from/username] [password] [host] [port] [to] [subject] [body]
+```
+
+Powershell:\
+CD to the directory `EmailClient.Emailing/bin/Debug/net9.0` and run the following command:
+```Powershell
 ./EmailClient.Mailing.exe [from/username] [password] [host] [port] [to] [subject] [body]
 ```
+
 For example, to send an email using Gmail's SMTP server:
 ```bash
 ./EmailClient.Mailing.exe "myAddress@gmail.com" "XXXX XXXX XXXX" "smtp.gmail.com" 587 "toAddress@gmail.com" "This is the subject" "This is the body"
+Attempting to send email via command-line
+Configuring: User:myAddress@gmail.com, Password:***, Host: smtp.gmail.com, Port: 587
+Sending: From:myAddress@gmail.com, To: toAddress@gmail.com, Subject: This is the subject, Body: This is th ...
 ```
 
 Running this command will send the email and exit. To see the command line options, you can run the command without any arguments.
