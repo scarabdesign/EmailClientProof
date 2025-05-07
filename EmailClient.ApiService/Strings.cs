@@ -68,6 +68,7 @@ namespace EmailClient.ApiService
             public const string RemovingAttemptFailed = "Removing attempt failed.";
             public const string AddingCampaignFailed = "Adding campaign failed.";
             public const string UpdatingCampaignFailed = "Updating campaign failed.";
+            public const string RemovingCampaignFailed = "Removing campaign failed.";
         }
 
         public static class ServiceLogs

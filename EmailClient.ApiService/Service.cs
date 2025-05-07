@@ -28,7 +28,7 @@ namespace EmailClient.ApiService
             return null;
         }
 
-        public async Task<(string?, int?)> AddEmailAttempt(EmailAttemptDto emailAttempt)
+        public async Task<Tuple<string?, int?>?> AddEmailAttempt(EmailAttemptDto emailAttempt)
         {
             try
             {
@@ -40,7 +40,7 @@ namespace EmailClient.ApiService
                         await emailClientData.AddEmailAttempt(emailAttemptModel);
                         await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(emailAttempt.CampaignId)));
                         StartQueue();
-                        return (emailAttempt.Email, emailAttempt.CampaignId);
+                        return new Tuple<string?, int?>(emailAttempt.Email, emailAttempt.CampaignId);
                     }
                 }
                 else
@@ -53,7 +53,7 @@ namespace EmailClient.ApiService
                 logger.LogError(ex, Strings.ServiceLogs.AddEmailAttemptFailed, ex.Message);
             }
 
-            return (null, null);
+            return default;
         }
 
         public async Task<List<EmailAttemptDto>?> AddEmailAttempts(List<EmailAttemptDto> emails)

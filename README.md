@@ -226,7 +226,7 @@ campaignId  : 2
 ### Refactoring
 - [ ] Combine socket responses to send fewer updates
 - [ ] Don't reference classes in web service directly from API service.
-- [ ] Use a different rich text editor or update TinyMCE (paid) and enable HTML editing
+- [ ] Use a different rich/HTML text editor or update TinyMCE (paid) and enable HTML editing
 ### Scalability
 - [ ] Add AMQP
 - [ ] Add to K8s cluster

@@ -144,6 +144,7 @@ else
                     <th aria-label="Number of attempts">Attempts</th>
                     <th aria-label="First attempt date/time">First Attempt</th>
                     <th aria-label="Last attempt date/time">Last Attempt</th>
+                    <th style="width: 100px"></th>
                 </tr>
             </thead>
             <tbody>
@@ -163,6 +164,11 @@ else
                         <td>@attempt.Attempts.ToString()</td>
                         <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
                         <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
+                        <td style="width: 100px">
+                            <button aria-label="Delete Email" class="btn btn-primary" @onclick=@(() => RemoveAttempt(attempt.Id))>
+                                <Icon Name="IconName.Trash3Fill" />
+                            </button>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -316,6 +322,13 @@ else
             return false;
         }
         return true;
+    }
+
+    private async void RemoveAttempt(int id)
+    {
+        EmailAttempts?.Remove(EmailAttempts.First(e => e.Id == id));
+        await EmailApi.RemoveEmailAttempt(id);
+        
     }
 
     private async void ShowWarning(string title, string message)
