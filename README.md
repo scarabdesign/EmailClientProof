@@ -263,8 +263,6 @@ Running this command will send the email and exit. To see the command line optio
 - [ ] Deploy to cloud
 ### Interface improvements
 - [ ] Bring more details of errors to the front-end
-- [ ] Put email status list in separate interface
-- [ ] Make navigable with breadcrumbs; remove large modal
 - [ ] Make tables searchable and filterable
 - [ ] Allow mass changing of list items (delete, pause, reset)
 - [ ] Use more icons
