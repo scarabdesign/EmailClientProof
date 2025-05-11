@@ -10,8 +10,21 @@ namespace EmailClient.Web
         public delegate void MessageReceived(string type, string message);
         public event MessageReceived? OnMessageReceived;
 
+        public async Task WsConnectIfNeeded()
+        {
+            if (hubConnection != null && hubConnection.State == HubConnectionState.Disconnected)
+            {
+                await hubConnection.StartAsync();
+            }
+            else if (hubConnection == null)
+            {
+                await WsConnect();
+            }
+        }
+
         public async Task WsConnect()
         {
+            Dispose();
             hubConnection = new HubConnectionBuilder()
                 .WithUrl("http://apiservice/clientHub", HttpMessageHandlerFactory)
                 .Build();

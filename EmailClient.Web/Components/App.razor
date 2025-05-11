@@ -1,4 +1,7 @@
-﻿<!DOCTYPE html>
+﻿@inject EmailApiClient EmailApi
+@inject ServiceSocket ServiceSocket
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -27,8 +30,15 @@
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="RenderMode.InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/TinyMCE.Blazor/TinyMce.Blazor.lib.module.js"></script>
 </body>
 </html>
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        await ServiceSocket.WsConnectIfNeeded();
+    }
+}

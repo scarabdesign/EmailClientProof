@@ -1,0 +1,155 @@
+﻿@page "/campaigns"
+
+@inject NavigationManager Navigation
+@inject EmailApiClient EmailApi
+@inject ServiceSocket ServiceSocket
+
+@using System.Text.Json;
+@using static EmailClient.ApiService.Dto
+
+@implements IDisposable
+
+@attribute [StreamRendering(true)]
+@attribute [OutputCache(Duration = 5)]
+
+<PageTitle>Mail Trash</PageTitle>
+
+<p>
+    <h1>Campaigns</h1>
+</p>
+
+<ConfirmDialog @ref="confirm" />
+
+@if (CampaignList == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <Button Color="ButtonColor.Primary" @onclick=@AddCampaign>+ New Campaign</Button>
+    <table class="table">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Subject</th>
+                <th>Sender</th>
+                <th aria-label="Number of emails in campaign">Count</th>
+                <th aria-label="Date/time of last update">Updated</th>
+                <th aria-label="Date/time of creation">Create</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (CampaignList.Count == 0)
+            {
+                <tr>
+                    <td colspan="4" class="text-end">
+                        No Email Campaigns.<br />Click to add one:
+                    </td>
+                    <td colspan="3" class="text-start">
+                        <Button Color="ButtonColor.Primary" @onclick=@AddCampaign>
+                            <Icon Name="IconName.Plus" Size="IconSize.x4" />
+                        </Button>
+                    </td>
+                </tr>
+            }
+            @foreach (var campaign in CampaignList)
+            {
+                <tr>
+                    <td>
+                        <button aria-label="Edit Campaign" class="btn btn-primary" @onclick=@(() => EditCampaign(campaign.Id))>
+                            <Icon Name="IconName.PencilFill" />
+                        </button>
+                        <button aria-label="Manage Recipients" class="btn btn-primary" @onclick=@(() => ManageRecipients(campaign.Id))>
+                            <Icon Name="IconName.EnvelopeArrowUpFill" />
+                        </button>
+                    </td>
+                    <td>@campaign.Name</td>
+                    <td>@campaign.Subject</td>
+                    <td>@campaign.Sender</td>
+                    <td>@campaign.EmailCount</td>
+                    <td>@campaign.Updated.ToShortDateString() : @campaign.Updated.ToShortTimeString()</td>
+                    <td>@campaign.Created.ToShortDateString() : @campaign.Created.ToShortTimeString()</td>
+                    <td>
+                        <button aria-label="Delete Campaign" class="btn btn-primary" @onclick=@(() => DeleteCampaign(campaign.Id))>
+                            <Icon Name="IconName.Trash3Fill" />
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private string CampaignsUpdated = "CampaignsUpdated";
+    private List<EmailClient.ApiService.Dto.CampaignDto>? CampaignList;
+    private bool CampaignUnsaved = false;
+    private JsonSerializerOptions jOpts = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+    private ConfirmDialog confirm = default!;
+
+    private void AddCampaign()
+    {
+        Navigation.NavigateTo("/editcampaign/0");
+    }
+
+    private async void DeleteCampaign(int id)
+    {
+        if (await confirm.ShowAsync(
+            title: "Delete Campaign?",
+            message1: "This action cannot be undone",
+            new ConfirmDialogOptions
+                {
+                    YesButtonText = "Delete",
+                    NoButtonText = "Cancel"
+                }
+        ))
+        {
+            await EmailApi.RemoveCampaign(id);
+        }
+    }
+
+    private void EditCampaign(int id)
+    {
+        Navigation.NavigateTo($"/editcampaign/{id}");
+    }
+
+    private void ManageRecipients(int id)
+    {
+        Navigation.NavigateTo($"/manageRecipients/{id}");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        CampaignList = await EmailApi.GetAllCampaigns();
+        ServiceSocket.OnMessageReceived += RefreshData;
+        ServiceSocket.Subscribe(CampaignsUpdated);
+    }
+
+    private void RefreshData(string subType, string? status = null)
+    {
+        if (subType == CampaignsUpdated && status != null)
+        {
+            var statusObj = JsonSerializer.Deserialize<StatusDto>(status, jOpts);
+            if (statusObj != null)
+            {
+                if (statusObj.Campaigns != null)
+                {
+                    CampaignList = statusObj.Campaigns;
+                    InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        ServiceSocket.OnMessageReceived -= RefreshData;
+    }
+
+}

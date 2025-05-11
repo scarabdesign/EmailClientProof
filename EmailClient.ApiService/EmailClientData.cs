@@ -68,7 +68,6 @@ namespace EmailClient.ApiService
                 if (targetCampaign == null) return null;
                 targetCampaign.EmailAttempts.Where(e => e.Status == EmailStatus.Paused).ToList().ForEach(e =>
                 {
-                    e.Attempts = 0;
                     e.Result = default;
                     e.ErrorCode = default;
                     e.Status = EmailStatus.Unsent;

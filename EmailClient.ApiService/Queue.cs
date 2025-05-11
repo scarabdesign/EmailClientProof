@@ -67,6 +67,10 @@ namespace EmailClient.ApiService
                 .OrderBy(e => e.CampaignId)
                 .ToListAsync());
 
+        private async Task<CampaignState?> GetCampaignRunningState(int id) =>
+            await contextQueue.Query(async db => (await db.Campaigns.AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Id == id))?.State ?? CampaignState.Unknown);
+
         private async Task<Campaign?> GetCampaign(int campaignId)
         {
             return await contextQueue.Query(async db => await db.Campaigns.Include(c => c.EmailAttempts).AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId));
@@ -224,7 +228,7 @@ namespace EmailClient.ApiService
                         continue;
                     }
 
-                    if (attempt.Campaign.State == CampaignState.Paused)
+                    if (await GetCampaignRunningState(attempt.Campaign.Id) == CampaignState.Paused)
                     {
                         await UpdateEmailAttempt(
                             attempt.Id,
