@@ -1,4 +1,4 @@
-# Email Client Proof of Concept
+# Mail Trash: A Proof of Concept
 
 This is a project written in ~5 days in .NET 9 and .NET Aspire. Aspire is designed to be readily 
 cloud-deployable and uses a microservice type architecture, utilizing containerization. To run this 
