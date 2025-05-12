@@ -152,12 +152,17 @@
             "6mwmbdo9vt782lq4todw@googlemail.com",
             "sharland.cruz@comcast.net",
             "g36lbeyd5wvfl0isl5x@rediffmail.com"
-        });
+        }) + ", \r\n";
         StateHasChanged();
     }
 
     private async void AddRecipients()
     {
+        if (string.IsNullOrWhiteSpace(newRecipients))
+        {
+            return;
+        }
+
         char[] delimiterChars = [' ', ',', '\r', '\n'];
         var trimmedRecipients = newRecipients.Split(delimiterChars).Select(r => r.Trim()).Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
         var valid = new List<string>();
@@ -189,25 +194,25 @@
             return;
         }
         newRecipients = string.Empty;
-        await AddRecipientsToCampaign(valid);
+        if (valid.Any())
+            await AddRecipientsToCampaign(valid);
     }
 
     private async Task AddRecipientsToCampaign(List<string> emails)
     {
-        var result = await EmailApi.AddEmailAttempts(
-            emails.Select(e =>
-                new EmailAttemptDto
-                    {
-                        Email = e,
-                        CampaignId = CurrentCampaignId
-                    }
-            ).ToList()
+        var newEmails = emails.Select(e =>
+            new EmailAttemptDto
+                {
+                    Email = e,
+                    CampaignId = CurrentCampaignId,
+                    Status = EmailStatus.Unsent,
+                    Attempts = 0
+                }
         );
-        if (result != null)
-        {
-            EmailAttempts = result;
-            await InvokeAsync(StateHasChanged);
-        }
+        EmailAttempts ??= new();
+        EmailAttempts?.AddRange(newEmails);
+        _ = await EmailApi.AddEmailAttempts(newEmails.Reverse().ToList());
+        await InvokeAsync(StateHasChanged);
     }
 
     private async void RemoveAttempt(int id)

@@ -23,11 +23,6 @@ namespace EmailClient.ApiService
                     Results.Ok(new { result = Strings.RouteResponses.Ok, email = result.Item1, id = result.Item2 }) :
                     Results.Problem(Strings.RouteResponses.AddingAttemptFailed))
                 .WithName(Strings.RouteNames.AddAttempt);
-            app.MapPost(root + Strings.RouteNames.AddAttempts, async (List<EmailAttemptDto> inEmails) =>
-                await service.AddEmailAttempts(inEmails) is List<EmailAttemptDto> emails ? 
-                    Results.Ok(new { result = Strings.RouteResponses.Ok, emails }) : 
-                    Results.Problem(Strings.RouteResponses.AddingAttemptsFailed))
-                .WithName(Strings.RouteNames.AddAttempts);
             app.MapPost(root + Strings.RouteNames.AddCampaign, async (CampaignDto campaign) =>
                 await service.AddCampaign(campaign) is int id ?
                     Results.Ok(new { result = Strings.RouteResponses.Ok, id }) :
@@ -48,6 +43,12 @@ namespace EmailClient.ApiService
                     Results.Ok(new { result = Strings.RouteResponses.Ok }) :
                     Results.Problem(Strings.RouteResponses.RemovingCampaignFailed))
                 .WithName(Strings.RouteNames.RemoveCampaign);
-    }
+            app.MapPost(root + Strings.RouteNames.AddAttempts, (List<EmailAttemptDto> emails) =>
+            {
+                _ = service.AddEmailAttempts(emails);
+                return Results.Ok(new { result = Strings.RouteResponses.Ok });
+            })
+            .WithName(Strings.RouteNames.AddAttempts);
+        }
     }
 }

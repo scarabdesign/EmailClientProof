@@ -9,32 +9,17 @@ public class EmailApiClient(HttpClient httpClient)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
-    public async Task<List<EmailAttemptDto>> GetAllAttempts(int campaignId, CancellationToken cancellationToken = default)
-    {
-        List<EmailAttemptDto>? attempts = null;
-
-        await foreach (var attempt in httpClient.GetFromJsonAsAsyncEnumerable<EmailAttemptDto>($"/getAllAttempts?id={campaignId}", cancellationToken))
-        {
-            if (attempt is not null)
-            {
-                attempts ??= [];
-                attempts.Add(attempt);
-            };
-        }
-
-        return attempts ?? [];
-    }
 
     public async Task<List<CampaignDto>> GetAllCampaigns(CancellationToken cancellationToken = default)
     {
         List<CampaignDto>? campaigns = null;
 
-        await foreach (var attempt in httpClient.GetFromJsonAsAsyncEnumerable<CampaignDto>($"/getAllCampaigns", cancellationToken))
+        await foreach (var campaign in httpClient.GetFromJsonAsAsyncEnumerable<CampaignDto>($"/getAllCampaigns", cancellationToken))
         {
-            if (attempt is not null)
+            if (campaign is not null)
             {
                 campaigns ??= [];
-                campaigns.Add(attempt);
+                campaigns.Add(campaign);
             };
         }
 
@@ -46,17 +31,7 @@ public class EmailApiClient(HttpClient httpClient)
         return await httpClient.GetFromJsonAsync<CampaignDto>($"/getCampaign?id={campaignId}", cancellationToken);
     }
 
-    public async Task<CampaignDto?> AddEmailAttempt(EmailAttemptDto emailAttempt, CancellationToken cancellationToken = default)
-    {
-        var response = await httpClient.PostAsJsonAsync("/addAttempt", emailAttempt, cancellationToken);
-        if (response.IsSuccessStatusCode)
-        {
-            return await response.Content.ReadFromJsonAsync<CampaignDto>(cancellationToken: cancellationToken);
-        }
-        return null;
-    }
-
-    public async Task<List<EmailAttemptDto>> AddEmailAttempts(List<EmailAttemptDto> emailAttempts, CancellationToken cancellationToken = default)
+    public async Task<bool> AddEmailAttempts(List<EmailAttemptDto> emailAttempts, CancellationToken cancellationToken = default)
     {
         var response = await httpClient.PostAsJsonAsync("/addAttempts", emailAttempts, cancellationToken);
         if (response.IsSuccessStatusCode)
@@ -64,10 +39,10 @@ public class EmailApiClient(HttpClient httpClient)
             var results = await response.Content.ReadFromJsonAsync<AddAttemptsResponse>(jOpts, cancellationToken: cancellationToken);
             if (results != null)
             {
-                return results.Emails;
+                return true;
             }
         }
-        return [];
+        return false;
     }
 
     public async Task<string?> RemoveEmailAttempt(int id, CancellationToken cancellationToken = default)

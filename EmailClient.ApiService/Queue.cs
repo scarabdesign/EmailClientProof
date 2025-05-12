@@ -64,7 +64,7 @@ namespace EmailClient.ApiService
             await contextQueue.Query(async db => await db.EmailAttempts.AsNoTracking()
                 .Include(e => e.Campaign)
                 .Where(e => (e.Status == EmailStatus.Unsent) || (e.Status == EmailStatus.Failed && e.Attempts < MaxAttempts))
-                .OrderBy(e => e.CampaignId)
+                .OrderBy(e => e.CampaignId).ThenByDescending(e => e.Id)
                 .ToListAsync());
 
         private async Task<CampaignState?> GetCampaignRunningState(int id) =>
