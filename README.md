@@ -1,6 +1,6 @@
 # Email Client Proof of Concept
 
-This is a project written in ~4 days in .NET 9 and .NET Aspire. Aspire is designed to be readily 
+This is a project written in ~5 days in .NET 9 and .NET Aspire. Aspire is designed to be readily 
 cloud-deployable and uses a microservice type architecture, utilizing containerization. To run this 
 project you will need:
 
@@ -253,8 +253,10 @@ Running this command will send the email and exit. To see the command line optio
 - [ ] Enable DB migrations
 - [ ] Separate models from dbContext
 - [ ] Use `record` for DTOs instead of classes
+- [ ] Use generic enumerable instead of list where possible
 ### Refactoring
 - [ ] Combine socket responses to send fewer updates
+- [ ] Return only deltas in socket response
 - [ ] Don't reference classes in web service directly from API service.
 - [ ] Use a different rich/HTML text editor or update TinyMCE (paid) and enable HTML editing
 ### Scalability
@@ -263,8 +265,6 @@ Running this command will send the email and exit. To see the command line optio
 - [ ] Deploy to cloud
 ### Interface improvements
 - [ ] Bring more details of errors to the front-end
-- [ ] Put email status list in separate interface
-- [ ] Make navigable with breadcrumbs; remove large modal
 - [ ] Make tables searchable and filterable
 - [ ] Allow mass changing of list items (delete, pause, reset)
 - [ ] Use more icons

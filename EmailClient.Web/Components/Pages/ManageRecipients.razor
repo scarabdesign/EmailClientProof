@@ -1,0 +1,233 @@
+﻿@page "/manageRecipients/{CurrentCampaignId:int}"
+@inject ServiceSocket ServiceSocket
+@inject EmailApiClient EmailApi
+
+@using System.Text.Json
+@using EmailClient.ApiService
+@using static EmailClient.ApiService.Dto
+@using System.ComponentModel.DataAnnotations
+
+@implements IDisposable
+
+@attribute [StreamRendering(true)]
+@attribute [OutputCache(Duration = 5)]
+
+<ConfirmDialog @ref="confirm" />
+
+<div>
+    <Breadcrumb Items="Breadcrumb"></Breadcrumb>
+</div>
+<div class="row mb-3">
+    <h1 class="col-md-8 d-flex align-items-center">Manage Recipients</h1>
+    <div class="col-md-4 d-flex align-items-center">
+        <Button @onclick=@ToggleCampaignPause Color="@(CurrentCampaign?.State == CampaignState.Running ? ButtonColor.Warning : ButtonColor.Success)" Class="me-2">
+            <Icon Name="@(CurrentCampaign?.State == CampaignState.Running ? IconName.Pause : IconName.Play)" />@(CurrentCampaign?.State == CampaignState.Running ? "Pause" : "Run")
+        </Button>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <label class="col-md-2 text-end">For Campaign:</label>
+    <div class="col-md-10">
+        <b>@CurrentCampaign?.Name</b>
+    </div>
+</div>
+<div class="row mb-3">
+    <label class="col-md-2 col-form-label text-end">Add Recipients: </label>
+    <div class="col-md-9">
+        <TextAreaInput @bind-Value="@newRecipients" Placeholder="Type in valid email addresses here, separated by commas, spaces or new lines" />
+    </div>
+    <div class="col-md-1">
+        <Button Color="ButtonColor.Success" Class="me-2" @onclick=@AddRecipients>Add</Button>
+        <br />
+        <br />
+        <Button Class="me-2" @onclick=@AddTestRecipients Outline=true Color="ButtonColor.Secondary">Load Test List</Button>
+    </div>
+</div>
+
+@if (EmailAttempts != null)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Status</th>
+                <th aria-label="Number of attempts">Attempts</th>
+                <th aria-label="Created date/time">Created</th>
+                <th aria-label="Last attempt date/time">Last Attempt</th>
+                <th style="width: 100px"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var attempt in EmailAttempts)
+            {
+                <tr>
+                    <td>@attempt.Email</td>
+                    <td>
+                        @attempt.Status.ToString() &nbsp;
+                        @if (attempt.Status == EmailStatus.Failed)
+                        {
+                            <Tooltip Class="d-inline-block" Title="@attempt.Result" Placement="TooltipPlacement.Right" role="button">
+                                <Icon Name="IconName.ExclamationTriangleFill" Color="IconColor.Danger" />
+                            </Tooltip>
+                        }
+                    </td>
+                    <td>@attempt.Attempts.ToString()</td>
+                    <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
+                    <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
+                    <td style="width: 100px">
+                        <button aria-label="Delete Email" class="btn btn-primary" @onclick=@(() => RemoveAttempt(attempt.Id))>
+                            <Icon Name="IconName.Trash3Fill" />
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+
+    [Parameter]
+    public int CurrentCampaignId { get; set; }
+
+    private List<BreadcrumbItem> Breadcrumb = new();
+    private CampaignDto? CurrentCampaign { get; set; }
+    private List<EmailAttemptDto>? EmailAttempts = new();
+    private string CampaignUpdated = "CampaignUpdated";
+    private string newRecipients = string.Empty;
+    private ConfirmDialog confirm = default!;
+    private JsonSerializerOptions jOpts = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Breadcrumb.Add(new BreadcrumbItem { Text = "Campaigns", Href = "/campaigns" });
+        Breadcrumb.Add(new BreadcrumbItem { Text = "Edit Campaign", Href = $"/editcampaign/{CurrentCampaignId}" });
+        Breadcrumb.Add(new BreadcrumbItem { Text = "Manage Recipients", IsCurrentPage = true });
+
+        CurrentCampaign = await EmailApi.GetCampaign(CurrentCampaignId);
+        if (CurrentCampaign != null)
+        {
+            EmailAttempts = CurrentCampaign.EmailAttempts;
+        }
+
+        ServiceSocket.OnMessageReceived -= RefreshData;
+        ServiceSocket.OnMessageReceived += RefreshData;
+        ServiceSocket.Subscribe(CampaignUpdated);
+    }
+
+    private async void RefreshData(string subType, string? status = null)
+    {
+        if (subType == CampaignUpdated && status != null)
+        {
+            var statusObj = JsonSerializer.Deserialize<StatusDto>(status, jOpts);
+            if (statusObj != null)
+            {
+                if (statusObj.CurrentlyViewing != null)
+                {
+                    CurrentCampaign = statusObj.CurrentlyViewing;
+                    CurrentCampaignId = CurrentCampaign.Id;
+                    EmailAttempts = CurrentCampaign.EmailAttempts;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+    }
+
+    private void AddTestRecipients()
+    {
+        newRecipients += string.Join(", \r\n", new List<string>()
+        {
+            "noaddress@this.time",
+            "amaan.nguyen@aol.com",
+            "wxa8ld5gu0694wv@rediffmail.com",
+            "marcus.farrell@yahoo.com",
+            "v5c4m624oknell4h@aol.com",
+            "esteban.griffin@outlook.com",
+            "hpklptzl666cepxofmw@outlook.com",
+            "chidera.hunter@msn.com",
+            "6mwmbdo9vt782lq4todw@googlemail.com",
+            "sharland.cruz@comcast.net",
+            "g36lbeyd5wvfl0isl5x@rediffmail.com"
+        }) + ", \r\n";
+        StateHasChanged();
+    }
+
+    private async void AddRecipients()
+    {
+        if (string.IsNullOrWhiteSpace(newRecipients))
+        {
+            return;
+        }
+
+        char[] delimiterChars = [' ', ',', '\r', '\n'];
+        var trimmedRecipients = newRecipients.Split(delimiterChars).Select(r => r.Trim()).Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
+        var valid = new List<string>();
+        var invalid = new List<string>();
+        var emailValidator = new EmailAddressAttribute();
+        trimmedRecipients.ForEach(r =>
+        {
+            if (emailValidator.IsValid(r))
+            {
+                valid.Add(r);
+            }
+            else
+            {
+                invalid.Add(r);
+            }
+        });
+
+        if (invalid.Any() && !await confirm.ShowAsync(
+                title: "Invalid Email(s) detected",
+                message1: "The following address(es) didn't look right: " + string.Join(", ", invalid),
+                message2: "If you've added others, you can continue to add them to the campaign, or cancel to go back and edit the input.",
+                new ConfirmDialogOptions
+                    {
+                        YesButtonText = "Continue",
+                        NoButtonText = "Cancel"
+                    }
+            ))
+        {
+            return;
+        }
+        newRecipients = string.Empty;
+        if (valid.Any())
+            await AddRecipientsToCampaign(valid);
+    }
+
+    private async Task AddRecipientsToCampaign(List<string> emails)
+    {
+        var newEmails = emails.Select(e =>
+            new EmailAttemptDto
+                {
+                    Email = e,
+                    CampaignId = CurrentCampaignId,
+                    Status = EmailStatus.Unsent,
+                    Attempts = 0
+                }
+        );
+        EmailAttempts ??= new();
+        EmailAttempts?.AddRange(newEmails);
+        _ = await EmailApi.AddEmailAttempts(newEmails.Reverse().ToList());
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void RemoveAttempt(int id)
+    {
+        EmailAttempts?.Remove(EmailAttempts.First(e => e.Id == id));
+        await EmailApi.RemoveEmailAttempt(id);
+    }
+
+    private async void ToggleCampaignPause()
+    {
+        await EmailApi.ToggleCampaignPause(CurrentCampaignId);
+    }
+
+    void IDisposable.Dispose()
+    {
+        ServiceSocket.OnMessageReceived -= RefreshData;
+    }
+}

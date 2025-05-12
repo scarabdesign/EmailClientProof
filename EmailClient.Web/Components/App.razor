@@ -1,4 +1,7 @@
-﻿<!DOCTYPE html>
+﻿@inject EmailApiClient EmailApi
+@inject ServiceSocket ServiceSocket
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -22,13 +25,21 @@
     <!-- Add sortable.js reference if SortableList component is used in your application. -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="_content/Blazor.Bootstrap/blazor.bootstrap.js"></script>
+    <PageTitle>Mail Trash</PageTitle>
 
     <HeadOutlet />
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="RenderMode.InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/TinyMCE.Blazor/TinyMce.Blazor.lib.module.js"></script>
 </body>
 </html>
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        await ServiceSocket.WsConnectIfNeeded();
+    }
+}

@@ -1,11 +1,9 @@
-﻿@page "/editcompaign/{NewCampaign:bool}"
-@page "/editcompaign/{CurrentCampaignId:int}"
-@rendermode InteractiveServer
+﻿@page "/editcampaign/{CurrentCampaignId:int}"
 
-@inject EmailApiClient EmailApi
 @inject ServiceSocket ServiceSocket
 @inject EmailApiClient EmailApi
 @inject IConfiguration Configuration
+@inject NavigationManager Navigation
 
 @using System.Text.Json
 @using EmailClient.ApiService
@@ -18,20 +16,6 @@
 @attribute [StreamRendering(true)]
 @attribute [OutputCache(Duration = 5)]
 
-<style>
-    .valid.modified:not([type=checkbox]) {
-        outline: 1px solid #26b050;
-    }
-
-    .invalid {
-        outline: 1px solid red;
-    }
-
-    .validation-message {
-        color: red;
-    }
-</style>
-
 <Modal @ref="warning" Title="@WarningTitle" Id="WarningModel">
     <BodyTemplate>
         @WarningMessage
@@ -41,7 +25,13 @@
     </FooterTemplate>
 </Modal>
 
+<NavigationLock ConfirmExternalNavigation="@CampaignUnsaved"
+                OnBeforeInternalNavigation="OnBeforeInternalNavigation" />
 <ConfirmDialog @ref="confirm" />
+
+<div>
+    <Breadcrumb Items="Breadcrumb"></Breadcrumb>
+</div>
 
 @if (CurrentCampaign == null)
 {
@@ -51,18 +41,25 @@ else
 {
     <EditForm EditContext="@editContext" FormName="EditCampaign">
         <DataAnnotationsValidator />
+        <div class="row">
+            <p class="col-md-8 d-flex align-items-center">
+                <h1>@(!NewCampaign ? "Edit Campaign" : "Add Campaign")</h1>
+            </p>
+            <div class="col-md-4 d-flex align-items-center">
+                <Button @onclick=@HandleOnValidSubmit Color="ButtonColor.Success" Outline="@(CampaignUnsaved ? false : true)" Class="float-end me-2">Save Campaign @(CampaignUnsaved ? "*" : "")</Button>
+                <Button @onclick=@ToggleCampaignPause Color="@(CurrentCampaign.State == CampaignState.Running ? ButtonColor.Warning : ButtonColor.Success)" Class="me-2" Disabled=@(CurrentCampaignId == 0) >
+                    <Icon Name="@(CurrentCampaign.State == CampaignState.Running ? IconName.Pause : IconName.Play)" />@(CurrentCampaign.State == CampaignState.Running ? "Pause" : "Run")
+                </Button>
+                @if (!NewCampaign)
+                {
+                    <Button Color="ButtonColor.Success" Class="me-2" @onclick=@AddRecipients>Manage Recipients</Button>
+                }
+            </div>
+        </div>
         <div class="form-group row mb-3">
             <div class="row">
                 <div class="col-md-2 text-end">Campaign ID:</div>
                 <div class="col-md-2">@(CurrentCampaign.Id > 0 ? CurrentCampaign.Id : "New")</div>
-                <div class="col-md-6 text-right">
-                    <Button @onclick=@HandleOnValidSubmit Color="ButtonColor.Success" Class="float-end me-2">Save Campaign</Button>
-                </div>
-                <div class="col-md-2">
-                    <Button @onclick=@ToggleCampaignPause Color="@(CurrentCampaign.State == CampaignState.Running ? ButtonColor.Warning : ButtonColor.Success)" Class="me-2">
-                        <Icon Name="@(CurrentCampaign.State == CampaignState.Running ? IconName.Pause : IconName.Play)" />@(CurrentCampaign.State == CampaignState.Running ? "Pause" : "Run")
-                    </Button>
-                </div>
             </div>
         </div>
 
@@ -91,15 +88,17 @@ else
         </div>
 
         <div class="form-group row mb-3">
-            <label class="col-md-2 col-form-label text-end">Email Body: <span class="text-danger">*</span></label>
+            <div class="col-md-2 col-form-label text-end">
+                <label>Email Body: <span class="text-danger">*</span></label>
+                <br />
+                <br />
+                <Button @onclick=@LoremIpsum Outline=true Color="ButtonColor.Secondary">Lorem Ipsum</Button>
+            </div>            
             <div class="col-md-10">
-                @*<TextAreaInput @bind-Value="@CurrentCampaign.Body" Placeholder="Enter email body" />*@
-                <Editor 
-                @ref="editor"
+                <Editor @ref="editor"
                 @bind-Value="@CurrentCampaign.Body"
                 Field="@(() => CurrentCampaign.Body)"
-                ApiKey="@Configuration["TinyMCEApiKey"]"
-                />
+                ApiKey="@Configuration["TinyMCEApiKey"]" />
                 <ValidationMessage For="@(() => CurrentCampaign.Body)" />
             </div>
         </div>
@@ -122,81 +121,24 @@ else
             </div>
         </div>
     </EditForm>
-
-    @if (EmailAttempts != null && !NewCampaign)
-    {
-        <div class="form-group row mb-3">
-            <label class="col-md-2 col-form-label text-end">Add Recipients: </label>
-            <div class="col-md-9">
-                <TextAreaInput @bind-Value="@newRecipients" Placeholder="Type in valid email addresses here, separated by commas or spaces" />
-            </div>
-            <div class="col-md-1">
-                <Button Color="ButtonColor.Success" Class="me-2" @onclick=@AddRecipients>Add</Button>
-            </div>
-        </div>
-
-
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th aria-label="Number of attempts">Attempts</th>
-                    <th aria-label="First attempt date/time">First Attempt</th>
-                    <th aria-label="Last attempt date/time">Last Attempt</th>
-                    <th style="width: 100px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var attempt in EmailAttempts)
-                {
-                    <tr>
-                        <td>@attempt.Email</td>
-                        <td>
-                            @attempt.Status.ToString() &nbsp;
-                            @if(attempt.Status == EmailStatus.Failed)
-                            {
-                                <Tooltip Class="d-inline-block" Title="@attempt.Result" Placement="TooltipPlacement.Right" role="button">
-                                    <Icon Name="IconName.ExclamationTriangleFill" Color="IconColor.Danger" />
-                                </Tooltip>
-                            }
-                        </td>
-                        <td>@attempt.Attempts.ToString()</td>
-                        <td>@attempt.Created.ToShortDateString() : @attempt.Created.ToShortTimeString()</td>
-                        <td>@(attempt.LastAttempt != null ? attempt.LastAttempt?.ToShortDateString() + " : " + attempt.LastAttempt?.ToShortTimeString() : "")</td>
-                        <td style="width: 100px">
-                            <button aria-label="Delete Email" class="btn btn-primary" @onclick=@(() => RemoveAttempt(attempt.Id))>
-                                <Icon Name="IconName.Trash3Fill" />
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
 }
 
 @code {
+
+    [Parameter]
+    public int CurrentCampaignId { get; set; }
+
+    [SupplyParameterFromForm]
+    private CampaignDto? CurrentCampaign { get; set; }
 
     private EditContext editContext = default!;
     private Modal warning = default!;
     private string WarningTitle = string.Empty;
     private string WarningMessage = string.Empty;
-
-    [Parameter]
-    public int CurrentCampaignId { get; set; }
-
-    [Parameter]
-    public bool NewCampaign { get; set; }
-
-    [Parameter]
-    public EventCallback<bool> CurrentCampaignUnsaved { get; set; }
-
-    [SupplyParameterFromForm]
-    private CampaignDto? CurrentCampaign { get; set; }
-
-    private List<EmailAttemptDto>? EmailAttempts = new();
+    private List<BreadcrumbItem> Breadcrumb = new();
+    public bool NewCampaign => CurrentCampaignId <= 0;
     private string CampaignUpdated = "CampaignUpdated";
+    private bool CampaignUnsaved = false;
     private string newRecipients = string.Empty;
     private ConfirmDialog confirm = default!;
     private Editor editor = default!;
@@ -207,8 +149,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        Breadcrumb.Add(new BreadcrumbItem { Text = "Campaigns", Href = "/campaigns" });
         if (NewCampaign)
         {
+            Breadcrumb.Add(new BreadcrumbItem { Text = "New Campaign", IsCurrentPage = true });
             CurrentCampaign = new()
                 {
                     Body = string.Empty,
@@ -219,12 +163,11 @@ else
         }
         else
         {
+            Breadcrumb.Add(new BreadcrumbItem { Text = "Edit Campaign", IsCurrentPage = true });
             CurrentCampaign = await EmailApi.GetCampaign(CurrentCampaignId);
         }
         if (CurrentCampaign != null)
         {
-            EmailAttempts = CurrentCampaign.EmailAttempts;
-
             editContext = new EditContext(CurrentCampaign);
             editContext.OnFieldChanged -= FieldEdited;
             editContext.OnFieldChanged += FieldEdited;
@@ -235,9 +178,21 @@ else
         ServiceSocket.Subscribe(CampaignUpdated);
     }
 
-    public async void FieldEdited(object? sender, FieldChangedEventArgs eventArgs)
+    private void LoremIpsum()
     {
-        await CurrentCampaignUnsaved.InvokeAsync(editContext.IsModified());
+        if (CurrentCampaign != null)
+        {
+            CurrentCampaign.Body +=
+                "Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.";
+            CampaignUnsaved = true;
+            editContext.MarkAsUnmodified();
+            StateHasChanged();
+        }
+    }
+
+    public void FieldEdited(object? sender, FieldChangedEventArgs eventArgs)
+    {
+        CampaignUnsaved = editContext.IsModified();
     }
 
     private async void RefreshData(string subType, string? status = null)
@@ -251,7 +206,6 @@ else
                 {
                     CurrentCampaign = statusObj.CurrentlyViewing;
                     CurrentCampaignId = CurrentCampaign.Id;
-                    EmailAttempts = CurrentCampaign.EmailAttempts;
                     await InvokeAsync(StateHasChanged);
                 }
             }
@@ -269,7 +223,6 @@ else
         {
             if (NewCampaign)
             {
-                NewCampaign = false;
                 await EmailApi.AddCampaign(CurrentCampaign);
             }
             else
@@ -277,7 +230,7 @@ else
                 await EmailApi.UpdateCampaign(CurrentCampaign);
             }
             editContext.MarkAsUnmodified();
-            await CurrentCampaignUnsaved.InvokeAsync(false);
+            CampaignUnsaved = false;
             return true;
         }
 
@@ -285,9 +238,27 @@ else
         return false;
     }
 
+
+    private async Task<bool> ConfirmClose()
+    {
+        return await confirm.ShowAsync(
+            title: "Close Window?",
+            message1: "You have unsaved changes to this campaign.",
+            message2: "Close and lose changes?",
+            new ConfirmDialogOptions
+                {
+                    YesButtonText = "Yes, Close",
+                    NoButtonText = "Cancel and Return"
+                }
+        );
+    }
+
     private async void ToggleCampaignPause()
     {
-        await EmailApi.ToggleCampaignPause(CurrentCampaignId);
+        if (await VerifiChanged() && !NewCampaign)
+        {
+            await EmailApi.ToggleCampaignPause(CurrentCampaignId);
+        }
     }
 
     private bool ValidateForm()
@@ -324,13 +295,6 @@ else
         return true;
     }
 
-    private async void RemoveAttempt(int id)
-    {
-        EmailAttempts?.Remove(EmailAttempts.First(e => e.Id == id));
-        await EmailApi.RemoveEmailAttempt(id);
-        
-    }
-
     private async void ShowWarning(string title, string message)
     {
         WarningTitle = title;
@@ -347,7 +311,7 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private async void AddRecipients()
+    private async Task<bool> VerifiChanged()
     {
         if (editContext.IsModified())
         {
@@ -360,64 +324,33 @@ else
                         YesButtonText = "Save and Continue",
                         NoButtonText = "Cancel"
                     }
-            )){
-                return;
-            }
-
-            if(!await HandleOnValidSubmit()){
-                return;
-            }
-        }
-
-        char[] delimiterChars = [' ', ',', '\r', '\n'];
-        var trimmedRecipients = newRecipients.Split(delimiterChars).Select(r => r.Trim()).Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
-        var valid = new List<string>();
-        var invalid = new List<string>();
-        var emailValidator = new EmailAddressAttribute();
-        trimmedRecipients.ForEach(r =>
-        {
-            if (emailValidator.IsValid(r))
-            {
-                valid.Add(r);
-            }
-            else
-            {
-                invalid.Add(r);
-            }
-        });
-
-        if (invalid.Any() && !await confirm.ShowAsync(
-                title: "Invalid Email(s) detected",
-                message1: "The following address(es) didn't look right: " + string.Join(", ", invalid),
-                message2: "If you've added others, you can continue to add them to the campaign, or cancel to go back and edit the input.",
-                new ConfirmDialogOptions
-                    {
-                        YesButtonText = "Continue",
-                        NoButtonText = "Cancel"
-                    }
             ))
-        {
-            return;
+            {
+                return false;
+            }
+
+            if (!await HandleOnValidSubmit())
+            {
+                return false;
+            }
         }
-        newRecipients = string.Empty;
-        await AddRecipientsToCampaign(valid);
+        return true;
     }
 
-    private async Task AddRecipientsToCampaign(List<string> emails)
+    private async void AddRecipients()
     {
-        var result = await EmailApi.AddEmailAttempts(
-            emails.Select(e =>
-                new EmailAttemptDto
-                    {
-                        Email = e,
-                        CampaignId = CurrentCampaignId
-                    }
-            ).ToList()
-        );
-        if (result != null)
+        if (await VerifiChanged() && !NewCampaign)
         {
-            EmailAttempts = result;
-            await InvokeAsync(StateHasChanged);
+            Navigation.NavigateTo("/manageRecipients/" + CurrentCampaignId);
+        }
+    }
+
+
+    private async Task OnBeforeInternalNavigation(LocationChangingContext context)
+    {
+        if (CampaignUnsaved && !await ConfirmClose())
+        {
+            context.PreventNavigation();
         }
     }
 

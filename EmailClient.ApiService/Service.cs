@@ -56,8 +56,9 @@ namespace EmailClient.ApiService
             return default;
         }
 
-        public async Task<List<EmailAttemptDto>?> AddEmailAttempts(List<EmailAttemptDto> emails)
+        public async Task AddEmailAttempts(List<EmailAttemptDto> emails)
         {
+            await Task.Yield();
             try
             {
                 var campaignId = 0;
@@ -79,14 +80,11 @@ namespace EmailClient.ApiService
                 }
                 await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(campaignId)));
                 StartQueue();
-                return await GetAllEmailAttempts(campaignId);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, Strings.ServiceLogs.AddEmailAttemptFailed, ex.Message);
             }
-
-            return null;
         }
 
         public async Task<string?> RemoveEmailAttempt(int id)

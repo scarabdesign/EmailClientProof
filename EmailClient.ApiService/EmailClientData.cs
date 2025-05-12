@@ -6,7 +6,7 @@ namespace EmailClient.ApiService
     public class EmailClientData(ContextQueue contextQueue)
     {
         public async Task<List<EmailAttempt>?> GetAllEmailAttempts(int campaignId) => 
-            await contextQueue.Query(async db => await db.EmailAttempts.Where(e => e.CampaignId == campaignId).AsTracking(QueryTrackingBehavior.NoTracking).ToListAsync());
+            await contextQueue.Query(async db => await db.EmailAttempts.Where(e => e.CampaignId == campaignId).AsTracking(QueryTrackingBehavior.NoTracking).OrderByDescending(e => e.Id).ToListAsync());
 
         public async Task AddEmailAttempt(EmailAttempt emailAttempt) {
             await contextQueue.Query(async db =>
@@ -68,7 +68,6 @@ namespace EmailClient.ApiService
                 if (targetCampaign == null) return null;
                 targetCampaign.EmailAttempts.Where(e => e.Status == EmailStatus.Paused).ToList().ForEach(e =>
                 {
-                    e.Attempts = 0;
                     e.Result = default;
                     e.ErrorCode = default;
                     e.Status = EmailStatus.Unsent;

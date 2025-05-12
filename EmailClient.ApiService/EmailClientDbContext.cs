@@ -107,6 +107,7 @@ namespace EmailClient.ApiService
 
     public enum CampaignState
     {
+        Unknown,
         Running,
         Paused,
     }
