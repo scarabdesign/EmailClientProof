@@ -1,0 +1,82 @@
+﻿@using Microsoft.JSInterop
+@using RTEJS_BlazorServer.RTEJS
+@implements IDisposable
+@inject IJSRuntime JS
+
+<div @ref="rtediv" @attributes="@AdditionAttributes">
+	@InitHtml
+</div>
+
+@code {
+
+	ElementReference rtediv;
+
+	[Parameter(CaptureUnmatchedValues = true)]
+	public Dictionary<string, object>? AdditionAttributes { get; set; }
+
+	[Parameter]
+	public RenderFragment? InitHtml { get; set; }
+
+	[Parameter]
+	public RTEConfig? Config { get; set; }
+
+	[Parameter]
+	public string? HtmlCode { get; set; }
+
+	[Parameter]
+	public EventCallback<string> HtmlCodeChanged { get; set; }
+
+	[Parameter]
+	public EventCallback<string> OnHtmlCodeChanged { get; set; }
+
+	DotNetObjectReference<RichTextEditor>? objref;
+
+	public void SetHTMLCode(string htmlcode)
+	{
+		JS.InvokeVoidAsync("RTEJS_setHTMLCode", rtediv, htmlcode);
+	}
+
+	public async Task<string> GetHTMLCode()
+	{
+		return await JS.InvokeAsync<string>("RTEJS_getHTMLCode", rtediv);
+	}
+
+	public async Task<string> GetText()
+	{
+		return await JS.InvokeAsync<string>("RTEJS_getText", rtediv);
+	}
+
+	[JSInvokable]
+	public void ClientEvent_HtmlCode(string htmlcode)
+	{
+		if (HtmlCode == htmlcode)
+			return;
+
+		HtmlCode = htmlcode;
+		HtmlCodeChanged.InvokeAsync(htmlcode);
+		OnHtmlCodeChanged.InvokeAsync(htmlcode);
+	}
+
+	protected override Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			objref = DotNetObjectReference.Create(this);
+
+			JS.InvokeVoidAsync("RTEJS_Init", rtediv, objref, System.Text.Json.JsonSerializer.Serialize(this.Config), HtmlCode);
+		}
+
+		return base.OnAfterRenderAsync(firstRender);
+	}
+
+	public void Dispose()
+	{
+		if (objref != null)
+		{
+			objref.Dispose();
+			objref = null;
+			JS.InvokeVoidAsync("RTEJS_Dispose", rtediv);
+		}
+	}
+
+}

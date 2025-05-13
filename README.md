@@ -257,8 +257,8 @@ Running this command will send the email and exit. To see the command line optio
 ### Refactoring
 - [ ] Combine socket responses to send fewer updates
 - [ ] Return only deltas in socket response
-- [ ] Don't reference classes in web service directly from API service.
-- [ ] Use a different rich/HTML text editor or update TinyMCE (paid) and enable HTML editing
+- [ ] Don't reference classes in web service directly from API service
+- [ ] Try using connection pool instead of SQL queue
 ### Scalability
 - [ ] Add AMQP
 - [ ] Add to K8s cluster

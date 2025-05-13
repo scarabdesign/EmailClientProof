@@ -78,7 +78,20 @@ namespace EmailClient.ApiService
             });
         }
 
-        public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? sender, CampaignState? state)
+        public async Task TogglePauseState(int id, CampaignState state)
+        {
+            await contextQueue.Query(async db =>
+            {
+                var targetCampaign = db.Campaigns.FirstOrDefault(c => c.Id == id);
+                if (targetCampaign == null) return null;
+                targetCampaign.State = state;
+                db.Campaigns.Update(targetCampaign);
+                await db.SaveChangesAsync();
+                return null;
+            });
+        }
+
+        public async Task UpdateCampaign(int id, string? name, string? subject, string? body, string? text, string? sender, CampaignState? state)
         {
             await contextQueue.Query(async db =>
             {
@@ -88,7 +101,7 @@ namespace EmailClient.ApiService
                 targetCampaign.Subject = subject ?? targetCampaign.Subject;
                 targetCampaign.Sender = sender ?? targetCampaign.Sender;
                 targetCampaign.Body = body ?? targetCampaign.Body;
-                targetCampaign.Text = Regex.Replace(targetCampaign.Body, "<[^>]*?>", " ").Replace("  ", " ");
+                targetCampaign.Text = text ?? targetCampaign.Text;
                 targetCampaign.State = state ?? targetCampaign.State;
                 targetCampaign.Updated = DateTime.UtcNow;
                 db.Campaigns.Update(targetCampaign);

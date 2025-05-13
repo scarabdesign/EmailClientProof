@@ -2,19 +2,33 @@
 
 @inject ServiceSocket ServiceSocket
 @inject EmailApiClient EmailApi
-@inject IConfiguration Configuration
 @inject NavigationManager Navigation
 
 @using System.Text.Json
 @using EmailClient.ApiService
 @using System.ComponentModel.DataAnnotations
+@using EmailClient.Web.Components.RTEJS
+@using RTEJS_BlazorServer.RTEJS
 @using static EmailClient.ApiService.Dto
-@using TinyMCE.Blazor
 
 @implements IDisposable
 
 @attribute [StreamRendering(true)]
 @attribute [OutputCache(Duration = 5)]
+
+<style>
+    .valid.modified:not([type=checkbox]) {
+        outline: 1px solid #26b050;
+    }
+
+    .invalid {
+        outline: 1px solid red;
+    }
+
+    .validation-message {
+        color: red;
+    }
+</style>
 
 <Modal @ref="warning" Title="@WarningTitle" Id="WarningModel">
     <BodyTemplate>
@@ -95,11 +109,7 @@ else
                 <Button @onclick=@LoremIpsum Outline=true Color="ButtonColor.Secondary">Lorem Ipsum</Button>
             </div>            
             <div class="col-md-10">
-                <Editor @ref="editor"
-                @bind-Value="@CurrentCampaign.Body"
-                Field="@(() => CurrentCampaign.Body)"
-                ApiKey="@Configuration["TinyMCEApiKey"]" />
-                <ValidationMessage For="@(() => CurrentCampaign.Body)" />
+                <RichTextEditor Config="rtecfg" @bind-HtmlCode="@CurrentCampaign.Body" @ref="editor" />
             </div>
         </div>
 
@@ -131,6 +141,9 @@ else
     [SupplyParameterFromForm]
     private CampaignDto? CurrentCampaign { get; set; }
 
+    RTEConfig rtecfg = new RTEConfig() { 
+        toolbar = "full"
+    };
     private EditContext editContext = default!;
     private Modal warning = default!;
     private string WarningTitle = string.Empty;
@@ -141,7 +154,7 @@ else
     private bool CampaignUnsaved = false;
     private string newRecipients = string.Empty;
     private ConfirmDialog confirm = default!;
-    private Editor editor = default!;
+    private RichTextEditor editor = default!;
     private JsonSerializerOptions jOpts = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -183,8 +196,9 @@ else
         if (CurrentCampaign != null)
         {
             CurrentCampaign.Body +=
-                "Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.";
+                "\r\nLorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.";
             CampaignUnsaved = true;
+            editor.SetHTMLCode(CurrentCampaign.Body);
             editContext.MarkAsUnmodified();
             StateHasChanged();
         }
@@ -221,6 +235,8 @@ else
 
         if (ValidateForm())
         {
+            CurrentCampaign.Text = await editor.GetText();
+
             if (NewCampaign)
             {
                 await EmailApi.AddCampaign(CurrentCampaign);
