@@ -171,7 +171,7 @@ namespace EmailClient.ApiService
         {
             try
             {
-                await emailClientData.UpdateCampaign(campaignDto.Id, campaignDto.Name, campaignDto.Subject, campaignDto.Body, campaignDto.Sender, campaignDto.State);
+                await emailClientData.UpdateCampaign(campaignDto.Id, campaignDto.Name, campaignDto.Subject, campaignDto.Body, campaignDto.Text, campaignDto.Sender, campaignDto.State);
                 await messageService.CampaignUpdated(CampaignDto.ToDto(await emailClientData.GetCampaign(campaignDto.Id)));
                 await messageService.CampaignsUpdated(CampaignDto.ToDtoList(await emailClientData.GetAllCampaigns() ?? []));
                 return campaignDto.Id;
@@ -190,9 +190,9 @@ namespace EmailClient.ApiService
                 var campaign = await emailClientData.GetCampaign(id);
                 if (campaign != null)
                 {
-                    campaign.State = campaign.State == CampaignState.Paused ? CampaignState.Running : CampaignState.Paused;
-                    await emailClientData.UpdateCampaign(campaign.Id, campaign.Name, campaign.Subject, campaign.Body, campaign.Sender, campaign.State);
-                    if (campaign.State == CampaignState.Running)
+                    var state = campaign.State == CampaignState.Paused ? CampaignState.Running : CampaignState.Paused;
+                    await emailClientData.TogglePauseState(campaign.Id, state);
+                    if (state == CampaignState.Running)
                     {
                         await emailClientData.UnpauseAttampts(campaign.Id);
                         StartQueue();
