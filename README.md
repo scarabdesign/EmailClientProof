@@ -268,10 +268,6 @@ Running this command will send the email and exit. To see the command line optio
 - [ ] Make tables searchable and filterable
 - [ ] Allow mass changing of list items (delete, pause, reset)
 - [ ] Use more icons
-### Marketability
-- [ ] Give it a catchy name
-- [ ] Spice up the layout
-- [ ] Create a logo/favicon
 ### Nice to haves
 - [ ] Supply names with email addresses, maybe other contact details
 - [ ] Use more contact details for more personalization
